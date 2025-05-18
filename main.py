@@ -76,8 +76,7 @@ def process_messages(sess, last_update_id):
 def main():
     sess = login_qb(QB_URL, QB_USER, QB_PASS)
     last_update_id = 0
-    status_counter = 0 # Contador para controlar o envio de status
-    status_interval_checks = INTERVALO # Número de verificações de mensagem por envio de status
+    last_status_time = 0 # Tempo da última atualização de status
     
     # Dicionário para rastrear torrents concluídos e evitar notificações duplicadas
     completed_torrents = {}
@@ -88,7 +87,7 @@ def main():
             # Processa mensagens do Telegram
             last_update_id = process_messages(sess, last_update_id)
             
-            # Verifica o status dos torrents mais frequentemente
+            # Verifica o status dos torrents
             current_torrents = fetch_torrents(sess, QB_URL)
             
             # Verifica se algum torrent foi concluído desde a última verificação
@@ -106,18 +105,18 @@ def main():
                 # Atualiza o estado anterior do torrent
                 previous_torrents_state[infohash] = {'state': current_state, 'name': name}
 
-            # Envia status periódico apenas após um certo número de verificações de mensagem
-            status_counter += 1
-            if status_counter >= status_interval_checks:
+            # Envia status periódico baseado no tempo
+            current_time = time.time()
+            if current_time - last_status_time >= INTERVALO:
                 resumo = resumo_torrents(current_torrents)
                 send_telegram(f"📊 <b>Status do qBittorrent</b>\n\n{resumo}")
-                status_counter = 0 # Reseta o contador
+                last_status_time = current_time # Atualiza o tempo da última atualização
                 
         except Exception as e:
             send_telegram(f"❗️ Erro crítico: {str(e)}")
         
-        # Pequena pausa para evitar uso excessivo de CPU, mas permitindo verificações rápidas de mensagem
-        time.sleep(1) # Intervalo curto para verificar mensagens mais frequentemente
+        # Pequena pausa para evitar uso excessivo de CPU
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()
