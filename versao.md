@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.4.2 - 2024-07-31
+
+### fix
+
+- Corrige problema de notificação de download concluído não sendo exibida.
+
+## v1.4.1 - 2024-07-30
+
+### fix
+
+- Corrige notificação duplicada de download concluído.
+
 ## v1.4.0 - 2024-07-30
 
 ### feat

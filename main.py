@@ -80,7 +80,10 @@ def main():
     
     # Dicionário para rastrear torrents concluídos e evitar notificações duplicadas
     completed_torrents = {}
-    previous_torrents_state = {}
+    
+    # Inicializa o estado anterior dos torrents
+    initial_torrents = fetch_torrents(sess, QB_URL)
+    previous_torrents_state = {torrent['hash']: {'state': torrent['state'], 'name': torrent['name']} for torrent in initial_torrents}
 
     while True:
         try:
@@ -96,11 +99,19 @@ def main():
                 current_state = torrent['state']
                 name = torrent['name']
 
-                # Verifica se o torrent estava baixando e agora está semeando/concluído
-                if infohash in previous_torrents_state and previous_torrents_state[infohash]['state'] == 'downloading' and current_state in ['seeding', 'finished']:
-                    if infohash not in completed_torrents:
-                        send_telegram(f"🎉 <b>Download Concluído:</b>\n{name}")
-                        completed_torrents[infohash] = True # Marca como notificado
+                # Verifica se o torrent mudou para um estado de conclusão
+                # Estados de download: downloading, stalledDL, checkingDL, pausedDL, queuedDL, forcedDL
+                # Estados de conclusão: uploading, seeding, finished, stalledUP, checkingUP, forcedUP
+                download_states = ['downloading', 'stalledDL', 'checkingDL', 'pausedDL', 'queuedDL', 'forcedDL']
+                completion_states = ['uploading', 'seeding', 'finished', 'stalledUP', 'checkingUP', 'forcedUP']
+                
+                if infohash in previous_torrents_state:
+                    prev_state = previous_torrents_state[infohash]['state']
+                    # Se estava em um estado de download e agora está em um estado de conclusão
+                    if prev_state in download_states and current_state in completion_states:
+                        if infohash not in completed_torrents:
+                            send_telegram(f"🎉 <b>Download Concluído:</b>\n{name}")
+                            completed_torrents[infohash] = True # Marca como notificado
                 
                 # Atualiza o estado anterior do torrent
                 previous_torrents_state[infohash] = {'state': current_state, 'name': name}
