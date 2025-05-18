@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+#!/usr/bin/env python3
 import time
 import requests
 import re
 from dotenv import load_dotenv
 import os
+from qbittorrent_api import login_qb, fetch_torrents, resumo_torrents, add_magnet
 
 load_dotenv()
 
@@ -14,20 +16,6 @@ TG_TOKEN = os.getenv('TG_TOKEN')
 TG_CHAT_ID = os.getenv('TG_CHAT_ID')
 INTERVALO = int(os.getenv('INTERVALO', 60))
 
-def login_qb():
-    sess = requests.Session()
-    data = {"username": QB_USER, "password": QB_PASS}
-    resp = sess.post(f"{QB_URL}/api/v2/auth/login", data=data)
-    resp.raise_for_status()
-    if resp.text != "Ok.":
-        raise Exception("Falha no login do qBittorrent")
-    return sess
-
-def fetch_torrents(sess):
-    resp = sess.get(f"{QB_URL}/api/v2/torrents/info")
-    resp.raise_for_status()
-    return resp.json()
-
 def send_telegram(msg, chat_id=None):
     if chat_id is None:
         chat_id = TG_CHAT_ID
@@ -35,23 +23,6 @@ def send_telegram(msg, chat_id=None):
     data = {"chat_id": chat_id, "text": msg, "parse_mode": "HTML"}
     resp = requests.post(url, data=data)
     resp.raise_for_status()
-
-def resumo_torrents(torrents):
-    lines = []
-    for t in torrents:
-        name = t["name"][:50]
-        status = t["state"]
-        prog = round(t["progress"] * 100, 1)
-        dl = round(t["dlspeed"] / 1024, 1)
-        up = round(t["upspeed"] / 1024, 1)
-        lines.append(f"<b>{name}</b> — {status}, {prog}% ↓{dl}KB/s ↑{up}KB/s")
-    return "\n".join(lines) or "Nenhum torrent ativo."
-
-def add_magnet(sess, magnet_url):
-    data = {"urls": magnet_url}
-    resp = sess.post(f"{QB_URL}/api/v2/torrents/add", data=data)
-    resp.raise_for_status()
-    return resp
 
 def process_messages(sess, last_update_id):
     url = f"https://api.telegram.org/bot{TG_TOKEN}/getUpdates"
@@ -81,7 +52,7 @@ def process_messages(sess, last_update_id):
                 valid_magnets = [m for m in magnets if m.startswith("magnet:")]
                 for magnet in valid_magnets:
                     try:
-                        add_magnet(sess, magnet)
+                        add_magnet(sess, QB_URL, magnet)
                         # Extrai o nome do torrent do link magnet
                         from urllib.parse import urlparse, parse_qs
                         parsed_magnet = urlparse(magnet)
@@ -103,7 +74,7 @@ def process_messages(sess, last_update_id):
         return last_update_id
 
 def main():
-    sess = login_qb()
+    sess = login_qb(QB_URL, QB_USER, QB_PASS)
     last_update_id = 0
     status_counter = 0 # Contador para controlar o envio de status
     status_interval_checks = INTERVALO # Número de verificações de mensagem por envio de status
@@ -118,7 +89,7 @@ def main():
             last_update_id = process_messages(sess, last_update_id)
             
             # Verifica o status dos torrents mais frequentemente
-            current_torrents = fetch_torrents(sess)
+            current_torrents = fetch_torrents(sess, QB_URL)
             
             # Verifica se algum torrent foi concluído desde a última verificação
             for torrent in current_torrents:

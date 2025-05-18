@@ -1,2 +1,5 @@
 # Ignorar arquivos de configuração do ambiente
 .env
+modelos.txt
+__pycache__/
+*.pyc
