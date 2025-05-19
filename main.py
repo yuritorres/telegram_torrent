@@ -8,6 +8,7 @@ import os
 from qbittorrent_api import login_qb, fetch_torrents, resumo_torrents, add_magnet
 from telegram_utils import send_telegram, process_messages
 from torrent_monitor import monitor_torrents
+import threading
 
 load_dotenv()
 
@@ -19,10 +20,19 @@ INTERVALO = int(os.getenv('INTERVALO', 60))
 def main():
     sess = login_qb(QB_URL, QB_USER, QB_PASS)
     last_update_id = 0
-    while True:
-        last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL)
-        # O monitoramento dos torrents roda em paralelo, se desejado, pode ser thread/processo
+    def mensagens_thread():
+        nonlocal last_update_id
+        while True:
+            last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL)
+            time.sleep(1)
+    def monitor_thread():
         monitor_torrents(sess, QB_URL, fetch_torrents, resumo_torrents, INTERVALO)
+    t1 = threading.Thread(target=mensagens_thread, daemon=True)
+    t2 = threading.Thread(target=monitor_thread, daemon=True)
+    t1.start()
+    t2.start()
+    while True:
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()

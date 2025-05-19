@@ -33,6 +33,10 @@ def process_messages(sess, last_update_id, add_magnet_func, qb_url):
             text = message.get('text', '')
             chat_id = message.get('chat', {}).get('id')
             if text and chat_id:
+                if text.strip() == "/start":
+                    send_telegram("👋 Olá! Seja bem-vindo ao bot de torrents no Telegram. Envie um link magnet para começar o download.", chat_id)
+                    new_last_id = max(new_last_id, update_id)
+                    continue
                 magnet_regex = r'magnet:\?xt=urn:btih:[0-9a-f]{40}.*'
                 magnets = re.findall(magnet_regex, text, re.IGNORECASE)
                 valid_magnets = [m for m in magnets if m.startswith("magnet:")]

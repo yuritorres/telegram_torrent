@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.1 - 2024-07-31
+
+### fix
+
+- Corrige concorrência e garante resposta imediata ao comando /start.
+- Agora o processamento de mensagens e o monitoramento de torrents ocorrem em threads separadas, evitando bloqueios e melhorando a experiência do usuário.
+
 ## v1.5.0 - 2024-07-31
 
 ### feat
