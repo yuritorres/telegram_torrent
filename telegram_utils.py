@@ -4,20 +4,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-TG_TOKEN = os.getenv('TG_TOKEN')
-TG_CHAT_ID = os.getenv('TG_CHAT_ID')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 def send_telegram(msg, chat_id=None):
     if chat_id is None:
-        chat_id = TG_CHAT_ID
-    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+        chat_id = TELEGRAM_CHAT_ID
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     data = {"chat_id": chat_id, "text": msg, "parse_mode": "HTML"}
     resp = requests.post(url, data=data)
     resp.raise_for_status()
 
 def process_messages(sess, last_update_id, add_magnet_func, qb_url):
     import re
-    url = f"https://api.telegram.org/bot{TG_TOKEN}/getUpdates"
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
     params = {'offset': last_update_id + 1, 'timeout': 0}
     try:
         resp = requests.get(url, params=params)

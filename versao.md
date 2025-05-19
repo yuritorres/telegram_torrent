@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.5.4 - 2025-05-19
+
+### style
+
+- Padroniza nomes das variáveis de ambiente do Telegram: substitui TG_TOKEN por TELEGRAM_BOT_TOKEN e TG_CHAT_ID por TELEGRAM_CHAT_ID em todo o projeto, garantindo consistência e rastreabilidade.
+
 ## v0.1.5.3 - 2025-05-19
 
 ### feat
