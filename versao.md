@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.5.2 - 2024-07-31
+
+### fix
+
+- Melhora a tolerância a falhas na conexão com o qBittorrent: caso não seja possível conectar, o bot permanece funcional e informa o usuário, sem interromper outras funcionalidades.
+
 ## v1.5.1 - 2024-07-31
 
 ### fix
