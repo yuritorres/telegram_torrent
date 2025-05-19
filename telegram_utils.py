@@ -52,7 +52,7 @@ def process_messages(sess, last_update_id, add_magnet_func, qb_url):
                 if text.strip() == "/qespaco":
                     try:
                         import shutil
-                        total, used, free = shutil.disk_usage("/")
+                        total, used, free = shutil.disk_usage(qbittorrent_storage_path)
                         def format_bytes(size):
                             for unit in ['B','KB','MB','GB','TB']:
                                 if size < 1024:
