@@ -37,6 +37,21 @@ def process_messages(sess, last_update_id, add_magnet_func, qb_url):
                     send_telegram("👋 Olá! Seja bem-vindo ao bot de torrents no Telegram. Envie um link magnet para começar o download.", chat_id)
                     new_last_id = max(new_last_id, update_id)
                     continue
+                if text.strip() == "/qespaco":
+                    try:
+                        import shutil
+                        total, used, free = shutil.disk_usage("/")
+                        def format_bytes(size):
+                            for unit in ['B','KB','MB','GB','TB']:
+                                if size < 1024:
+                                    return f"{size:.2f} {unit}"
+                                size /= 1024
+                        msg = f"💾 <b>Espaço em disco:</b>\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                        send_telegram(msg, chat_id)
+                    except Exception as e:
+                        send_telegram(f"❌ Erro ao obter espaço em disco: {str(e)}", chat_id)
+                    new_last_id = max(new_last_id, update_id)
+                    continue
                 magnet_regex = r'magnet:\?xt=urn:btih:[0-9a-f]{40}.*'
                 magnets = re.findall(magnet_regex, text, re.IGNORECASE)
                 valid_magnets = [m for m in magnets if m.startswith("magnet:")]

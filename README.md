@@ -45,3 +45,6 @@ Este projeto segue o Versionamento Semântico (SemVer) e utiliza commits padroni
 ## Changelog
 
 Consulte o arquivo `versao.md` para o histórico de mudanças.
+
+- Para consultar o espaço em disco disponível, envie o comando /qhd no chat do Telegram.
++ Para consultar o espaço em disco disponível, envie o comando /qespaco no chat do Telegram.
