@@ -17,7 +17,8 @@ def send_telegram(msg, chat_id=None):
     resp = requests.post(url, data=data)
     resp.raise_for_status()
 
-from incorporar.jellyfin_telegram import process_jellyfin_command
+#Telegram Jellyfin
+from jellyfin_telegram import process_jellyfin_command
 
 def process_messages(sess, last_update_id, add_magnet_func, qb_url):
     import re
