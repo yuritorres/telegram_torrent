@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.5.5 - 2025-05-19
+
+### feat
+
+- Adiciona a variável de ambiente AUTHORIZED_USERS: permite configurar IDs de usuários autorizados a executar comandos críticos no bot, aumentando a segurança e o controle de acesso.
+- Documentação atualizada no README.md para orientar sobre o uso da nova variável.
+
 ## v0.1.5.4 - 2025-05-19
 
 ### style

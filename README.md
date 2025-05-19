@@ -22,9 +22,10 @@ O projeto foi modularizado para facilitar a manutenção e a extensão:
    QB_URL=http://localhost:8080 # URL do seu qBittorrent WebUI
    QB_USER=seu_usuario
    QB_PASS=sua_senha
-   TG_TOKEN=seu_token_do_bot_telegram
-   TG_CHAT_ID=seu_chat_id_do_telegram # O ID do chat onde o bot enviará mensagens
+   TELEGRAM_BOT_TOKEN=seu_token_do_bot_telegram
+   TELEGRAM_CHAT_ID=seu_chat_id_do_telegram # O ID do chat onde o bot enviará mensagens
    INTERVALO=60 # Intervalo em segundos entre as verificações de status (opcional, padrão é 60)
+   AUTHORIZED_USERS=123456789,987654321 # (Opcional) IDs dos usuários autorizados a executar comandos críticos, separados por vírgula. Se não definido, qualquer usuário pode executar comandos.
    ```
 4. Obtenha seu `TG_CHAT_ID` enviando uma mensagem para o seu bot e acessando `https://api.telegram.org/botSEU_TOKEN/getUpdates`.
 
@@ -46,5 +47,4 @@ Este projeto segue o Versionamento Semântico (SemVer) e utiliza commits padroni
 
 Consulte o arquivo `versao.md` para o histórico de mudanças.
 
-- Para consultar o espaço em disco disponível, envie o comando /qhd no chat do Telegram.
-+ Para consultar o espaço em disco disponível, envie o comando /qespaco no chat do Telegram.
+- Para consultar o espaço em disco disponível, envie o comando /qespaco no chat do Telegram.
