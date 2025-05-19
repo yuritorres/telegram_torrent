@@ -52,6 +52,37 @@ def process_messages(sess, last_update_id, add_magnet_func, qb_url):
                         send_telegram(f"❌ Erro ao obter espaço em disco: {str(e)}", chat_id)
                     new_last_id = max(new_last_id, update_id)
                     continue
+                if text.strip() == "/qtorrents":
+                    try:
+                        if sess is None:
+                            send_telegram("❌ Não conectado ao qBittorrent.", chat_id)
+                        else:
+                            from qbittorrent_api import fetch_torrents
+                            torrents = fetch_torrents(sess, qb_url)
+                            ativos = []
+                            pausados = []
+                            finalizados = []
+                            parados = []
+                            for t in torrents:
+                                estado = t.get('state','')
+                                nome = t.get('name','')
+                                if estado in ['downloading','stalledDL','checkingDL','queuedDL','forcedDL']:
+                                    ativos.append(nome)
+                                elif estado in ['pausedDL','pausedUP']:
+                                    pausados.append(nome)
+                                elif estado in ['uploading','seeding','finished','stalledUP','checkingUP','forcedUP']:
+                                    finalizados.append(nome)
+                                elif estado in ['stalledDL','stalledUP','error','missingFiles','unknown']:
+                                    parados.append(nome)
+                            msg = "<b>Torrents Ativos:</b>\n" + ("\n".join(ativos) if ativos else "Nenhum")
+                            msg += "\n\n<b>Torrents Pausados:</b>\n" + ("\n".join(pausados) if pausados else "Nenhum")
+                            msg += "\n\n<b>Torrents Finalizados:</b>\n" + ("\n".join(finalizados) if finalizados else "Nenhum")
+                            msg += "\n\n<b>Torrents Parados:</b>\n" + ("\n".join(parados) if parados else "Nenhum")
+                            send_telegram(msg, chat_id)
+                    except Exception as e:
+                        send_telegram(f"❌ Erro ao listar torrents: {str(e)}", chat_id)
+                    new_last_id = max(new_last_id, update_id)
+                    continue
                 magnet_regex = r'magnet:\?xt=urn:btih:[0-9a-f]{40}.*'
                 magnets = re.findall(magnet_regex, text, re.IGNORECASE)
                 valid_magnets = [m for m in magnets if m.startswith("magnet:")]

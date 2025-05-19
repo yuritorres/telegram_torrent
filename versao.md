@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.5.3 - 2025-05-19
+
+### feat
+
+- Cria o comando /qtorrents: Exibe  torrents parados, ativos, pausados e finalizados. A listagem está mais completa e informativa, proporcionando melhor acompanhamento do status dos torrents.
+
 ## v0.1.5.2 - 2025-05-19
 
 ### fix
