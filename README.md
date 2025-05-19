@@ -41,6 +41,8 @@ python main.py
 
 O bot irá iniciar, conectar-se ao qBittorrent e começar a processar mensagens do Telegram e enviar atualizações de status.
 
+Agora, o comando `/qespaco` utiliza a API do qBittorrent para fornecer informações precisas sobre o espaço em disco, incluindo total, usado e livre.
+
 ## Versionamento
 
 Este projeto segue o Versionamento Semântico (SemVer) e utiliza commits padronizados em Português do Brasil. O changelog é mantido no arquivo `versao.md`.

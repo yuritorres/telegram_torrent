@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.6.1 - 2025-05-21
+
+### feat
+
+- Atualização do comando `/qespaco` para utilizar a API do qBittorrent, fornecendo informações detalhadas sobre o espaço em disco, incluindo total, usado e livre.
+
 ## v0.1.6.0 - 2025-05-20
 
 ### feat

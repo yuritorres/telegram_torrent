@@ -6,6 +6,7 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+qbittorrent_storage_path = os.getenv('QBITTORRENT_STORAGE_PATH')
 
 AUTHORIZED_USERS = os.getenv('AUTHORIZED_USERS', '').split(',') if os.getenv('AUTHORIZED_USERS') else []
 
@@ -51,17 +52,24 @@ def process_messages(sess, last_update_id, add_magnet_func, qb_url):
                     continue
                 if text.strip() == "/qespaco":
                     try:
-                        import shutil
-                        total, used, free = shutil.disk_usage(qbittorrent_storage_path)
-                        def format_bytes(size):
-                            for unit in ['B','KB','MB','GB','TB']:
-                                if size < 1024:
-                                    return f"{size:.2f} {unit}"
-                                size /= 1024
-                        msg = f"💾 <b>Espaço em disco:</b>\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
-                        send_telegram(msg, chat_id)
+                        if sess is None:
+                            send_telegram("❌ Não conectado ao qBittorrent.", chat_id)
+                        else:
+                            resp = sess.get(f"{qb_url}/api/v2/sync/maindata")
+                            resp.raise_for_status()
+                            data = resp.json()
+                            total = data['server_state']['alltime_dl']
+                            used = data['server_state']['alltime_ul']
+                            free = data['server_state']['free_space_on_disk']
+                            def format_bytes(size):
+                                for unit in ['B','KB','MB','GB','TB']:
+                                    if size < 1024:
+                                        return f"{size:.2f} {unit}"
+                                    size /= 1024
+                            msg = f"💾 <b>Espaço em disco do qBittorrent:</b>\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                            send_telegram(msg, chat_id)
                     except Exception:
-                        send_telegram("❌ Erro ao obter espaço em disco.", chat_id)
+                        send_telegram("❌ Erro ao obter espaço em disco do qBittorrent.", chat_id)
                     new_last_id = max(new_last_id, update_id)
                     continue
                 if text.strip() == "/qtorrents":
