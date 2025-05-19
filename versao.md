@@ -6,19 +6,19 @@
 
 - O comando `/qespaco` agora é compatível com todas as versões do qBittorrent: tenta obter o espaço total, usado e livre usando a API `/api/v2/app/drive_info` (quando disponível) e, caso não exista, faz fallback para `/api/v2/sync/maindata`, mostrando ao menos o espaço livre e, se possível, também o total/usado. Isso garante que o comando sempre informe o espaço disponível no servidor do qBittorrent, independentemente da versão.
 
-## v0.1.6.2 - 2024-05-22
+## v0.1.6.2 - 2025-05-19
 
 ### fix
 
 - Corrige a exibição do espaço em disco no comando `/qespaco`. Agora, o bot obtém o caminho de salvamento diretamente do qBittorrent e utiliza `shutil.disk_usage` para mostrar os valores corretos de espaço total, usado e livre, resolvendo a inconsistência anterior onde o espaço usado podia aparecer maior que o total.
 
-## v0.1.6.1 - 2025-05-21
+## v0.1.6.1 - 2025-05-19
 
 ### feat
 
 - Atualização do comando `/qespaco` para utilizar a API do qBittorrent, fornecendo informações detalhadas sobre o espaço em disco, incluindo total, usado e livre.
 
-## v0.1.6.0 - 2025-05-20
+## v0.1.6.0 - 2025-05-19
 
 ### feat
 
