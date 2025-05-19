@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.6.0 - 2025-05-20
+
+### feat
+
+- Integração com o Jellyfin: adiciona os módulos jellyfin_api.py e jellyfin_telegram.py para gerenciamento de mídia e notificações via Telegram.
+
 ## v0.1.5.5 - 2025-05-19
 
 ### feat

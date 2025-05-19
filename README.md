@@ -9,6 +9,8 @@ O projeto foi modularizado para facilitar a manutenção e a extensão:
 - `qbittorrent_api.py`: funções para autenticação e interação com o qBittorrent.
 - `telegram_utils.py`: utilitários para envio e processamento de mensagens no Telegram.
 - `torrent_monitor.py`: monitoramento de torrents e notificações automáticas de status/conclusão.
+- `jellyfin_api.py`: integração com o Jellyfin para gerenciamento de mídia.
+- `jellyfin_telegram.py`: comandos e notificações do Jellyfin via Telegram.
 
 ## Configuração
 

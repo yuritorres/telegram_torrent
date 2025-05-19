@@ -17,6 +17,8 @@ def send_telegram(msg, chat_id=None):
     resp = requests.post(url, data=data)
     resp.raise_for_status()
 
+from incorporar.jellyfin_telegram import process_jellyfin_command
+
 def process_messages(sess, last_update_id, add_magnet_func, qb_url):
     import re
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
@@ -36,6 +38,10 @@ def process_messages(sess, last_update_id, add_magnet_func, qb_url):
             chat_id = message.get('chat', {}).get('id')
             user_id = message.get('from', {}).get('id')
             if text and chat_id:
+                # Comandos Jellyfin
+                if process_jellyfin_command(text, chat_id):
+                    new_last_id = max(new_last_id, update_id)
+                    continue
                 # Verifica se o usuário está autorizado para comandos críticos
                 is_authorized = not AUTHORIZED_USERS or str(user_id) in AUTHORIZED_USERS
                 if text.strip() == "/start":

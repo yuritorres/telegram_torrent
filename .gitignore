@@ -4,3 +4,4 @@ modelos.txt
 __pycache__/
 *.pyc
 .trae/*
+incorporar/*
