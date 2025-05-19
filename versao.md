@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.5.0 - 2024-07-31
+
+### feat
+
+- Modulariza o projeto, separando funcionalidades em arquivos distintos para melhor organização e manutenção.
+- Cria os módulos `telegram_utils.py` (utilitários para Telegram) e `torrent_monitor.py` (monitoramento e notificações de torrents).
+- Simplifica o `main.py`, tornando-o responsável apenas pela orquestração dos módulos.
+
 ## v1.4.2 - 2024-07-31
 
 ### fix

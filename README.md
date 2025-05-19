@@ -2,6 +2,14 @@
 
 Um bot para Telegram que interage com o qBittorrent para adicionar torrents via links magnet e fornecer atualizações de status.
 
+## Estrutura Modular
+
+O projeto foi modularizado para facilitar a manutenção e a extensão:
+- `main.py`: ponto de entrada do bot, responsável por orquestrar as chamadas entre os módulos.
+- `qbittorrent_api.py`: funções para autenticação e interação com o qBittorrent.
+- `telegram_utils.py`: utilitários para envio e processamento de mensagens no Telegram.
+- `torrent_monitor.py`: monitoramento de torrents e notificações automáticas de status/conclusão.
+
 ## Configuração
 
 1. Clone este repositório.
