@@ -41,7 +41,10 @@ python main.py
 
 O bot irá iniciar, conectar-se ao qBittorrent e começar a processar mensagens do Telegram e enviar atualizações de status.
 
-Agora, o comando `/qespaco` utiliza a API do qBittorrent para fornecer informações precisas sobre o espaço em disco, incluindo total, usado e livre.
+O comando `/qespaco` mostra o espaço em disco disponível no servidor do qBittorrent:
+- Em versões recentes, exibe Total, Usado e Livre (via API `/api/v2/app/drive_info`).
+- Em versões antigas, faz fallback para `/api/v2/sync/maindata` e mostra ao menos o espaço livre, tentando informar também o total/usado se possível.
+Assim, o comando é compatível com todas as versões do qBittorrent.
 
 ## Versionamento
 

@@ -6,7 +6,7 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-qbittorrent_storage_path = os.getenv('QBITTORRENT_STORAGE_PATH')
+# qbittorrent_storage_path = os.getenv('QBITTORRENT_STORAGE_PATH') # Não é mais necessário, será obtido via API
 
 AUTHORIZED_USERS = os.getenv('AUTHORIZED_USERS', '').split(',') if os.getenv('AUTHORIZED_USERS') else []
 
@@ -54,22 +54,66 @@ def process_messages(sess, last_update_id, add_magnet_func, qb_url):
                     try:
                         if sess is None:
                             send_telegram("❌ Não conectado ao qBittorrent.", chat_id)
-                        else:
-                            resp = sess.get(f"{qb_url}/api/v2/sync/maindata")
-                            resp.raise_for_status()
-                            data = resp.json()
-                            total = data['server_state']['alltime_dl']
-                            used = data['server_state']['alltime_ul']
-                            free = data['server_state']['free_space_on_disk']
-                            def format_bytes(size):
-                                for unit in ['B','KB','MB','GB','TB']:
-                                    if size < 1024:
-                                        return f"{size:.2f} {unit}"
-                                    size /= 1024
-                            msg = f"💾 <b>Espaço em disco do qBittorrent:</b>\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
-                            send_telegram(msg, chat_id)
-                    except Exception:
-                        send_telegram("❌ Erro ao obter espaço em disco do qBittorrent.", chat_id)
+                            new_last_id = max(new_last_id, update_id)
+                            continue
+                        # Obter o caminho de salvamento padrão do qBittorrent
+                        prefs_resp = sess.get(f"{qb_url}/api/v2/app/preferences")
+                        prefs_resp.raise_for_status()
+                        prefs_data = prefs_resp.json()
+                        save_path = prefs_data.get('save_path')
+                        if not save_path:
+                            send_telegram("❌ Caminho de salvamento do qBittorrent não encontrado.", chat_id)
+                            new_last_id = max(new_last_id, update_id)
+                            continue
+                        # Consultar espaço em disco via API do qBittorrent
+                        def format_bytes(size):
+                            for unit in ['B','KB','MB','GB','TB']:
+                                if size < 1024:
+                                    return f"{size:.2f} {unit}"
+                                size /= 1024
+                        try:
+                            drive_info_resp = sess.get(f"{qb_url}/api/v2/app/drive_info", params={"path": save_path})
+                            drive_info_resp.raise_for_status()
+                            drive_info = drive_info_resp.json()
+                            total = drive_info.get('total')
+                            free = drive_info.get('free')
+                            used = total - free if total is not None and free is not None else None
+                            if total is not None and used is not None and free is not None:
+                                msg = f"💾 Espaço em disco:\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                            else:
+                                msg = "❌ Não foi possível obter as informações de espaço em disco do servidor qBittorrent."
+                        except Exception as e:
+                            # Se for erro 404, usar fallback para /sync/maindata
+                            if hasattr(e, 'response') and e.response is not None and e.response.status_code == 404:
+                                maindata_resp = sess.get(f"{qb_url}/api/v2/sync/maindata", params={"rid": 0})
+                                maindata_resp.raise_for_status()
+                                maindata = maindata_resp.json()
+                                server_state = maindata.get('server_state', {})
+                                free = server_state.get('free_space_on_disk')
+                                total = None
+                                used = None
+                                # Tenta obter total/usado se o caminho existir localmente
+                                import os
+                                try:
+                                    if save_path and os.path.exists(save_path):
+                                        import shutil
+                                        disk_usage = shutil.disk_usage(save_path)
+                                        total = disk_usage.total
+                                        # Calcula usado a partir de total e livre
+                                        used = total - free if total is not None and free is not None else None
+                                except Exception:
+                                    pass
+                                if free is not None and total is not None and used is not None:
+                                    msg = f"💾 Espaço em disco:\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                                elif free is not None:
+                                    msg = f"💾 Espaço livre no disco: {format_bytes(free)}"
+                                else:
+                                    msg = "❌ Não foi possível obter o espaço livre em disco do servidor qBittorrent."
+                            else:
+                                msg = f"❌ Erro ao obter espaço em disco do servidor qBittorrent: {str(e)}"
+                        send_telegram(msg, chat_id)
+                    except Exception as e:
+                        send_telegram(f"❌ Erro ao obter espaço em disco do servidor qBittorrent: {str(e)}", chat_id)
                     new_last_id = max(new_last_id, update_id)
                     continue
                 if text.strip() == "/qtorrents":
