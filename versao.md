@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.2.0.1 - 2023-11-15
+
+### fix
+
+- Melhorado o tratamento de erros nos comandos Jellyfin para evitar mensagens de erro repetidas
+- Adicionado timeout nas requisições para o servidor Jellyfin
+- Implementado tratamento de exceções mais robusto na API do Jellyfin
+- Corrigido o problema específico com o comando /jfinfo
+
+## v0.2.0.0 - 2023-11-14
+
+### feat
+
+- Melhoria significativa na integração com Jellyfin/Emby: expansão da API com novos métodos para obter informações do sistema, detalhes de itens, sessões ativas e conteúdo recentemente adicionado.
+- Novos comandos Telegram para Jellyfin: `/jfhelp`, `/jfrecent`, `/jfinfo`, `/jfitem`, `/jfsessions`.
+- Melhor formatação das respostas do Jellyfin no Telegram, incluindo detalhes como ano, duração, gêneros e avaliações.
+- Tratamento automático de URLs do Jellyfin/Emby, garantindo compatibilidade com ambos os sistemas.
+
 ## v0.1.6.3 - 2025-05-19
 
 ### feat

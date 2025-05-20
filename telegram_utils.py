@@ -41,7 +41,14 @@ def process_messages(sess, last_update_id, add_magnet_func, qb_url):
             user_id = message.get('from', {}).get('id')
             if text and chat_id:
                 # Comandos Jellyfin
-                if process_jellyfin_command(text, chat_id):
+                try:
+                    if process_jellyfin_command(text, chat_id):
+                        new_last_id = max(new_last_id, update_id)
+                        continue
+                except Exception as e:
+                    import traceback
+                    print(f"Erro ao processar comando Jellyfin: {traceback.format_exc()}")
+                    send_telegram(f"❌ Erro ao processar comando Jellyfin: {str(e)}", chat_id)
                     new_last_id = max(new_last_id, update_id)
                     continue
                 # Verifica se o usuário está autorizado para comandos críticos
