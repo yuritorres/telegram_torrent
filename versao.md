@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.0.4 - 2025-05-19
+
+### docs
+- Atualizada a documentação dos comandos do Jellyfin no README.md
+- Adicionada descrição detalhada para cada comando (/jflib, /jfsearch, /jfrecent, /jfinfo, /jfitem, /jfsessions)
+- Incluídas informações sobre funcionalidades e requisitos de cada comando
+- Reorganizada a seção de comandos do Jellyfin para melhor legibilidade
+
+## v0.2.0.3 - 2025-05-19
+### docs
+- Documentação completa dos comandos do Jellyfin no README.md
+- Adicionada descrição detalhada de cada comando com exemplos de uso
+- Incluídas informações sobre permissões e limitações do sistema
+
 ## v0.2.0.2 - 2025-05-19
 
 ### fix
@@ -90,7 +104,6 @@
 - Modulariza o projeto, separando funcionalidades em arquivos distintos para melhor organização e manutenção.
 - Cria os módulos `telegram_utils.py` (utilitários para Telegram) e `torrent_monitor.py` (monitoramento e notificações de torrents).
 - Simplifica o `main.py`, tornando-o responsável apenas pela orquestração dos módulos.
-
 ## v0.1.4.2 - 2025-05-18
 
 ### fix

@@ -41,10 +41,82 @@ python main.py
 
 O bot irá iniciar, conectar-se ao qBittorrent e começar a processar mensagens do Telegram e enviar atualizações de status.
 
-O comando `/qespaco` mostra o espaço em disco disponível no servidor do qBittorrent:
-- Em versões recentes, exibe Total, Usado e Livre (via API `/api/v2/app/drive_info`).
-- Em versões antigas, faz fallback para `/api/v2/sync/maindata` e mostra ao menos o espaço livre, tentando informar também o total/usado se possível.
-Assim, o comando é compatível com todas as versões do qBittorrent.
+## Comandos Disponíveis
+
+### Comandos Gerais
+
+- `/start`: Inicia a interação com o bot e exibe mensagem de boas-vindas.
+- `/help`: Exibe a lista completa de comandos disponíveis e suas descrições.
+
+### Comandos do qBittorrent
+
+#### Gerenciamento de Torrents
+- `/qtorrents`: Lista todos os torrents ativos, pausados, finalizados e parados (requer autorização).
+  - Exibe nome, progresso, velocidade e status de cada torrent.
+  - Permite visualizar detalhes específicos de cada download.
+- **Links Magnet**: Envie qualquer link magnet válido para iniciar o download (requer autorização).
+  - Formato: `magnet:?xt=urn:btih:...`
+  - O bot confirmará o recebimento e iniciará o download automaticamente.
+
+#### Monitoramento do Sistema
+- `/qespaco`: Mostra o espaço em disco disponível no servidor do qBittorrent.
+  - Em versões recentes: Exibe Total, Usado e Livre (via API `/api/v2/app/drive_info`).
+  - Em versões antigas: Fallback para `/api/v2/sync/maindata` mostrando espaço livre.
+
+### Comandos do Jellyfin
+
+O bot oferece integração completa com o Jellyfin para gerenciamento de mídia através do módulo `jellyfin_telegram.py`.
+
+#### Gerenciamento de Mídia
+- `/jflib`: Lista todas as bibliotecas disponíveis no servidor Jellyfin.
+  - Exibe nome e tipo de cada biblioteca
+  - Mostra o número total de itens em cada biblioteca
+  - Indica o status de sincronização de cada biblioteca
+
+- `/jfsearch <termo>`: Pesquisa por conteúdo específico nas bibliotecas.
+  - Busca por títulos, atores, diretores e gêneros
+  - Suporta pesquisa parcial de termos
+  - Exibe resultados com detalhes básicos
+
+- `/jfrecent`: Mostra as adições mais recentes ao servidor.
+  - Lista os últimos conteúdos adicionados
+  - Inclui data de adição e detalhes do conteúdo
+  - Organiza por data de adição
+
+- `/jfinfo`: Exibe informações detalhadas sobre o servidor.
+  - Versão do servidor
+  - Status de operação
+  - Estatísticas de uso
+  - Informações de sistema
+
+- `/jfitem <id>`: Mostra detalhes completos de um item específico.
+  - Título e ano
+  - Duração e qualidade
+  - Elenco e equipe técnica
+  - Sinopse e classificação
+  - Informações técnicas do arquivo
+
+- `/jfsessions`: Lista todas as sessões ativas no servidor (requer privilégios de administrador).
+  - Usuários conectados
+  - Conteúdo em reprodução
+  - Dispositivo e qualidade de reprodução
+  - Tempo de conexão
+
+- `/jfhelp`: Exibe a lista completa de comandos disponíveis com suas descrições detalhadas.
+
+#### Notificações e Status
+- `/jstatus`: Verifica o status atual do servidor Jellyfin.
+- `/jnotif [on/off]`: Ativa ou desativa notificações de novos conteúdos.
+
+### Notificações Automáticas
+
+O bot enviará automaticamente notificações para:
+- Conclusão de downloads de torrents
+- Erros durante o download
+- Novos conteúdos adicionados ao Jellyfin
+- Alertas de espaço em disco baixo
+- Atualizações de status do servidor Jellyfin
+- Sessões iniciadas ou finalizadas no Jellyfin
 
 ## Versionamento
 
@@ -53,5 +125,3 @@ Este projeto segue o Versionamento Semântico (SemVer) e utiliza commits padroni
 ## Changelog
 
 Consulte o arquivo `versao.md` para o histórico de mudanças.
-
-- Para consultar o espaço em disco disponível, envie o comando /qespaco no chat do Telegram.
