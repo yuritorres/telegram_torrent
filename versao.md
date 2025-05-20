@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.2.0.2 - 2023-11-16
+## v0.2.0.2 - 2025-05-19
 
 ### fix
 
@@ -9,7 +9,7 @@
 - Adicionada validação de tags HTML para evitar erros de formatação nas mensagens do Telegram
 - Limitado o tamanho das mensagens para evitar erros de requisição
 
-## v0.2.0.1 - 2023-11-15
+## v0.2.0.1 - 2025-05-19
 
 ### fix
 
@@ -18,7 +18,7 @@
 - Implementado tratamento de exceções mais robusto na API do Jellyfin
 - Corrigido o problema específico com o comando /jfinfo
 
-## v0.2.0.0 - 2023-11-14
+## v0.2.0.0 - 2025-05-19
 
 ### feat
 
