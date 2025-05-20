@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.0.2 - 2023-11-16
+
+### fix
+
+- Corrigido erro 400 Bad Request no comando /jfhelp, melhorando o tratamento de caracteres especiais em mensagens HTML
+- Implementado sistema de fallback para envio de mensagens sem formatação quando ocorrem erros de formatação HTML
+- Adicionada validação de tags HTML para evitar erros de formatação nas mensagens do Telegram
+- Limitado o tamanho das mensagens para evitar erros de requisição
+
 ## v0.2.0.1 - 2023-11-15
 
 ### fix

@@ -10,13 +10,44 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 AUTHORIZED_USERS = os.getenv('AUTHORIZED_USERS', '').split(',') if os.getenv('AUTHORIZED_USERS') else []
 
-def send_telegram(msg, chat_id=None):
+def send_telegram(msg, chat_id=None, parse_mode="HTML"):
     if chat_id is None:
         chat_id = TELEGRAM_CHAT_ID
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    data = {"chat_id": chat_id, "text": msg, "parse_mode": "HTML"}
-    resp = requests.post(url, data=data)
-    resp.raise_for_status()
+    
+    # Sanitiza a mensagem para evitar erros de formatação HTML
+    if parse_mode == "HTML":
+        # Garante que as tags HTML estejam corretamente fechadas
+        # Substitui caracteres problemáticos por entidades HTML
+        import re
+        
+        # Verifica se há tags HTML não fechadas
+        open_tags = re.findall(r'<([a-z]+)[^<>]*>', msg, re.IGNORECASE)
+        close_tags = re.findall(r'</([a-z]+)>', msg, re.IGNORECASE)
+        
+        # Se houver tags não fechadas, remove a formatação HTML
+        if len(open_tags) != len(close_tags):
+            parse_mode = None
+    
+    # Limita o tamanho da mensagem para evitar erros
+    if len(msg) > 4096:
+        msg = msg[:4093] + "..."
+    
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        data = {"chat_id": chat_id, "text": msg}
+        
+        if parse_mode:
+            data["parse_mode"] = parse_mode
+            
+        resp = requests.post(url, data=data)
+        resp.raise_for_status()
+        return True
+    except requests.exceptions.HTTPError as e:
+        print(f"❌ Erro ao enviar mensagem para o Telegram: {e}")
+        # Tenta enviar novamente sem formatação HTML se ocorrer erro
+        if parse_mode:
+            return send_telegram(msg, chat_id, parse_mode=None)
+        return False
 
 #Telegram Jellyfin
 from jellyfin_telegram import process_jellyfin_command

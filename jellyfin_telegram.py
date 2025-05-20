@@ -40,15 +40,21 @@ def process_jellyfin_command(text, chat_id):
     
     # Comando de ajuda
     if text == "/jfhelp":
-        help_text = "<b>Comandos Jellyfin disponíveis:</b>\n\n"
-        help_text += "/jflib - Lista todas as bibliotecas\n"
-        help_text += "/jfsearch <termo> - Pesquisa por conteúdo\n"
-        help_text += "/jfrecent - Mostra adições recentes\n"
-        help_text += "/jfinfo - Informações do servidor\n"
-        help_text += "/jfitem <id> - Detalhes de um item específico\n"
-        help_text += "/jfsessions - Lista sessões ativas (admin)\n"
-        send_telegram(help_text, chat_id)
-        return True
+        try:
+            help_text = "<b>Comandos Jellyfin disponíveis:</b>\n\n"
+            help_text += "/jflib - Lista todas as bibliotecas\n"
+            help_text += "/jfsearch &lt;termo&gt; - Pesquisa por conteúdo\n"
+            help_text += "/jfrecent - Mostra adições recentes\n"
+            help_text += "/jfinfo - Informações do servidor\n"
+            help_text += "/jfitem &lt;id&gt; - Detalhes de um item específico\n"
+            help_text += "/jfsessions - Lista sessões ativas (admin)\n"
+            send_telegram(help_text, chat_id)
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao processar comando /jfhelp: {str(e)}")
+            # Tenta enviar uma mensagem simplificada sem formatação
+            send_telegram("Comandos Jellyfin disponíveis: /jflib, /jfsearch, /jfrecent, /jfinfo, /jfitem, /jfsessions", chat_id, parse_mode=None)
+            return True
     
     # Lista bibliotecas
     if text.startswith("/jflib"):
