@@ -12,6 +12,23 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 AUTHORIZED_USERS = [uid.strip() for uid in os.getenv('AUTHORIZED_USERS', '').split(',') if uid.strip()]
 
+def set_bot_commands():
+    """
+    Define os comandos do menu do bot no Telegram.
+    """
+    commands = [
+        {"command": "start", "description": "Iniciar o bot"},
+        {"command": "qespaco", "description": "Mostrar espaço em disco"},
+        {"command": "qtorrents", "description": "Listar torrents"},
+    ]
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setMyCommands"
+    try:
+        resp = requests.post(url, json={"commands": commands}, timeout=10)
+        resp.raise_for_status()
+        print("Comandos do bot registrados com sucesso no Telegram.")
+    except Exception as e:
+        print(f"Erro ao registrar comandos do bot: {e}")
+
 def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mode: str = "HTML") -> bool:
     """
     Envia uma mensagem para o Telegram.

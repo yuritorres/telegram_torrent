@@ -2,7 +2,9 @@
 import time
 import os
 import threading
+import requests
 from dotenv import load_dotenv
+from telegram_utils import send_telegram, process_messages, set_bot_commands
 
 # Carrega as variáveis de ambiente
 load_dotenv()
@@ -24,6 +26,8 @@ except ImportError as e:
     QBITTORRENT_AVAILABLE = False
 
 def main():
+    # Atualiza o menu de comandos do bot no Telegram
+    set_bot_commands()
     # Inicializa a sessão do qBittorrent se disponível
     sess = None
     if QBITTORRENT_AVAILABLE:
