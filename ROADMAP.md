@@ -9,7 +9,9 @@
 - **v0.0.1.2-alpha** (25/05/2025)
   - Reintegração com Jellyfin
   - Novos comandos: `/recent`, `/libraries`, `/status`
-  - Exibição de itens recentes em mensagens individuais
+  - Exibição de itens recentes com botões inline
+  - Botões de ação rápida (Assistir/Não Assistir/Detalhes)
+  - Mensagens de status auto-expiráveis
   - Suporte a Markdown nas mensagens
 
 ## Próximas Versões Alpha (Desenvolvimento Ativo)
@@ -17,6 +19,7 @@
 ### v0.0.1.3-alpha (Próxima)
 - [x] ~~Reintegração básica com Jellyfin~~
 - [x] ~~Comandos básicos do Jellyfin (/recent, /libraries, /status)~~
+- [x] ~~Suporte a botões inline nos itens recentes~~
 - [ ] Busca avançada na biblioteca do Jellyfin
 - [ ] Controle de permissões para comandos do Jellyfin
 - [ ] Notificações de novos conteúdos adicionados
@@ -37,7 +40,7 @@
 - [ ] Integração estável com Jellyfin
 - [ ] Documentação básica de instalação e uso
 - [ ] Testes automatizados básicos
-- [ ] Suporte a comandos via botões inline
+- [x] ~~Suporte a comandos via botões inline~~
 - [ ] Controle de permissões para comandos do Jellyfin
 
 ### v0.2.0 - Melhorias na Experiência (Previsto: Out/2025)

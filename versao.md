@@ -1,17 +1,21 @@
 # Changelog
 
-## v0.0.1.2-alpha - 2025-05-24
+## v0.0.1.2-alpha - 2025-05-25
 
 ### feat
 - Reintegração completa com Jellyfin
 - Novos comandos: `/recent`, `/libraries`, `/status`
-- Exibição de itens recentes em mensagens individuais
+- Exibição de itens recentes em mensagens individuais com botões inline
 - Suporte a Markdown nas mensagens do Jellyfin
+- Botões de ação rápida nos itens recentes (Assistir/Não Assistir/Detalhes)
+- Sistema de expiração automática para mensagens de status
+- Comandos de status do qBittorrent com mensagens auto-expiráveis
 
 ### refactor
 - Melhorada a estrutura do código para suportar múltiplos serviços
 - Sistema de autenticação unificado
 - Tratamento de erros aprimorado
+- Melhor gerenciamento de mensagens e callbacks do Telegram
 
 ## v0.0.1.1-alpha - 2025-05-24
 
