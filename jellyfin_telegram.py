@@ -35,15 +35,35 @@ class JellyfinTelegramBot:
     def send_recent_items(self, chat_id, send_telegram_func):
         try:
             import asyncio
+            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
             async def fetch():
                 async with JellyfinAPI(self.jellyfin_url, self.jellyfin_username, self.jellyfin_password) as api:
                     items = await api.get_recent_items(5)
                     if not items:
                         send_telegram_func("❌ Nenhum item recente encontrado.", chat_id, parse_mode="Markdown")
                         return
-                    for item in items:
+                    for item in items[:5]:
                         msg = self.format_item_info(item)
-                        send_telegram_func(msg, chat_id, parse_mode="Markdown")
+                        # Botões inline
+                        keyboard = [
+                            [
+                                InlineKeyboardButton("✅ Marcar Assistido", callback_data=f"watch_{item['Id']}"),
+                                InlineKeyboardButton("⏸️ Marcar Não Assistido", callback_data=f"unwatch_{item['Id']}")
+                            ],
+                            [InlineKeyboardButton("ℹ️ Mais Detalhes", callback_data=f"details_{item['Id']}")]
+                        ]
+                        reply_markup = {
+                            "inline_keyboard": [
+                                [
+                                    {"text": "✅ Marcar Assistido", "callback_data": f"watch_{item['Id']}"},
+                                    {"text": "⏸️ Marcar Não Assistido", "callback_data": f"unwatch_{item['Id']}"}
+                                ],
+                                [
+                                    {"text": "ℹ️ Mais Detalhes", "callback_data": f"details_{item['Id']}"}
+                                ]
+                            ]
+                        }
+                        send_telegram_func(msg, chat_id, parse_mode="Markdown", reply_markup=reply_markup)
             asyncio.run(fetch())
         except Exception as e:
             send_telegram_func(f"❌ Erro ao buscar itens recentes: {str(e)}", chat_id, parse_mode="Markdown")

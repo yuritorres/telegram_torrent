@@ -69,7 +69,7 @@ def delete_message(chat_id, message_id):
     except Exception as e:
         print(f"Erro ao apagar mensagem: {e}")
 
-def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mode: str = "HTML") -> bool:
+def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mode: str = "HTML", reply_markup: dict = None) -> bool:
     """
     Envia uma mensagem para o Telegram.
     
@@ -77,7 +77,7 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
         msg: A mensagem a ser enviada
         chat_id: ID do chat do destinatário (opcional, usa TELEGRAM_CHAT_ID se não fornecido)
         parse_mode: Modo de análise da mensagem (HTML ou Markdown)
-        
+        reply_markup: Dicionário de botões inline (opcional)
     Returns:
         bool: True se a mensagem foi enviada com sucesso, False caso contrário
     """
@@ -106,12 +106,13 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
         msg = msg[:4093] + "..."
     
     try:
+        import json
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         data = {"chat_id": str(chat_id), "text": msg}
-        
         if parse_mode:
             data["parse_mode"] = parse_mode
-            
+        if reply_markup:
+            data["reply_markup"] = json.dumps(reply_markup)
         resp = requests.post(url, data=data, timeout=10)
         resp.raise_for_status()
         return True
