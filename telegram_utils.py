@@ -1,9 +1,13 @@
 import requests
 import os
 import re
+import logging
 from dotenv import load_dotenv
 from typing import Optional, List, Dict, Any, Union, Callable
 import threading
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Carrega as variáveis de ambiente
 load_dotenv()
@@ -29,9 +33,9 @@ def set_bot_commands():
     try:
         resp = requests.post(url, json={"commands": commands}, timeout=10)
         resp.raise_for_status()
-        print("Comandos do bot registrados com sucesso no Telegram.")
+        logger.info("Comandos do bot registrados com sucesso no Telegram.")
     except Exception as e:
-        print(f"Erro ao registrar comandos do bot: {e}")
+        logger.error(f"Erro ao registrar comandos do bot: {e}")
 
 EXPIRAR_MSG = int(os.getenv('EXPIRAR_MSG', 30))
 
@@ -42,12 +46,12 @@ def send_and_expire_status(msg: str, chat_id: Optional[Union[str, int]] = None, 
     if expirar is None:
         expirar = EXPIRAR_MSG
     if not TELEGRAM_BOT_TOKEN:
-        print(" Token do bot do Telegram não configurado")
+        logger.error("Token do bot do Telegram não configurado")
         return False
     if chat_id is None:
         chat_id = TELEGRAM_CHAT_ID
         if not chat_id:
-            print(" Nenhum chat_id fornecido e TELEGRAM_CHAT_ID não configurado")
+            logger.error("Nenhum chat_id fornecido e TELEGRAM_CHAT_ID não configurado")
             return False
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     data = {"chat_id": chat_id, "text": msg, "parse_mode": parse_mode}
@@ -59,7 +63,7 @@ def send_and_expire_status(msg: str, chat_id: Optional[Union[str, int]] = None, 
         threading.Timer(expirar, delete_message, args=(chat_id, message_id)).start()
         return True
     except Exception as e:
-        print(f"Erro ao enviar mensagem de status: {e}")
+        logger.error(f"Erro ao enviar mensagem de status: {e}")
         return False
 
 def delete_message(chat_id, message_id):
@@ -67,7 +71,7 @@ def delete_message(chat_id, message_id):
     try:
         requests.post(url, json={"chat_id": chat_id, "message_id": message_id}, timeout=10)
     except Exception as e:
-        print(f"Erro ao apagar mensagem: {e}")
+        logger.error(f"Erro ao apagar mensagem: {e}")
 
 def get_main_keyboard() -> dict:
     """
@@ -102,13 +106,13 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
         bool: True se a mensagem foi enviada com sucesso, False caso contrário
     """
     if not TELEGRAM_BOT_TOKEN:
-        print(" Token do bot do Telegram não configurado")
+        logger.error("Token do bot do Telegram não configurado")
         return False
         
     if chat_id is None:
         chat_id = TELEGRAM_CHAT_ID
         if not chat_id:
-            print(" Nenhum chat_id fornecido e TELEGRAM_CHAT_ID não configurado")
+            logger.error("Nenhum chat_id fornecido e TELEGRAM_CHAT_ID não configurado")
             return False
     
     # Sanitiza a mensagem para evitar erros de formatação HTML
@@ -139,13 +143,13 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
         resp.raise_for_status()
         return True
     except requests.exceptions.RequestException as e:
-        print(f" Erro ao enviar mensagem para o Telegram: {e}")
+        logger.error(f"Erro ao enviar mensagem para o Telegram: {e}")
         # Tenta enviar novamente sem formatação HTML se ocorrer erro
         if parse_mode and parse_mode.upper() == "HTML":
             return send_telegram(msg, chat_id, parse_mode=None)
         return False
     except Exception as e:
-        print(f" Erro inesperado ao enviar mensagem para o Telegram: {e}")
+        logger.error(f"Erro inesperado ao enviar mensagem para o Telegram: {e}")
         return False
 
 def format_bytes(size: int) -> str:
@@ -310,7 +314,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
         int: ID da última atualização processada
     """
     if not TELEGRAM_BOT_TOKEN:
-        print(" Token do bot do Telegram não configurado")
+        logger.error("Token do bot do Telegram não configurado")
         return last_update_id
         
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
@@ -322,7 +326,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
         data = resp.json()
         
         if not data.get('ok', False):
-            print(f" Resposta inesperada da API do Telegram: {data}")
+            logger.error(f"Resposta inesperada da API do Telegram: {data}")
             return last_update_id
             
         updates = data.get('result', [])
@@ -345,25 +349,18 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 # Atualiza o ID da última mensagem processada
                 new_last_id = max(new_last_id, update_id)
                 
-                # Verifica se o usuário está autorizado para comandos críticos
                 is_authorized = not AUTHORIZED_USERS or user_id in AUTHORIZED_USERS
                 
-                # Processa comandos do teclado
-                if text == "📊 Status do Servidor":
-                    text = "/status"
-                elif text == "📦 Listar Torrents":
-                    text = "/qtorrents"
-                elif text == "💾 Espaço em Disco":
-                    text = "/qespaco"
-                elif text == "🎬 Itens Recentes":
-                    text = "/recent"
-                elif text == "📚 Bibliotecas":
-                    text = "/libraries"
-                elif text == "❓ Ajuda":
-                    text = "/start"
+                keyboard_command_map = {
+                    "📊 Status do Servidor": "/status",
+                    "📦 Listar Torrents": "/qtorrents",
+                    "💾 Espaço em Disco": "/qespaco",
+                    "🎬 Itens Recentes": "/recent",
+                    "📚 Bibliotecas": "/libraries",
+                    "❓ Ajuda": "/start"
+                }
                 
-                # Verifica se o usuário está autorizado para comandos críticos
-                is_authorized = not AUTHORIZED_USERS or user_id in AUTHORIZED_USERS
+                text = keyboard_command_map.get(text, text)
                 
                 # Processa comandos
                 if text == "/start" or text == "❓ Ajuda":
@@ -389,7 +386,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     
                 elif text == "/qtorrents":
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
+                        send_telegram("Você não tem permissão para executar este comando.", chat_id)
                         continue
                     
                     torrents_list = list_torrents(sess, qb_url)
@@ -399,21 +396,21 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 # Comandos do Jellyfin
                 elif text == "/recent" and jellyfin_bot:
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
+                        send_telegram("Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
                     jellyfin_bot.send_recent_items(chat_id, send_telegram, use_keyboard=True)
                     continue
                 
                 elif text == "/libraries" and jellyfin_bot:
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
+                        send_telegram("Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
                     jellyfin_bot.list_libraries(chat_id, send_telegram, use_keyboard=True)
                     continue
                 
                 elif text == "/status" and jellyfin_bot:
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
+                        send_telegram("Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
                     send_telegram(jellyfin_bot.get_status_text(), chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
@@ -424,7 +421,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 
                 for magnet in magnets:
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para adicionar torrents.", chat_id)
+                        send_telegram("Você não tem permissão para adicionar torrents.", chat_id)
                         send_telegram("❌ Você não tem permissão para adicionar torrents.", chat_id)
                         continue
                         
@@ -439,15 +436,15 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                         send_telegram(f"❌ Erro ao adicionar torrent: {str(e)}", chat_id)
                 
             except Exception as e:
-                print(f"Erro ao processar mensagem: {e}")
+                logger.error(f"Erro ao processar mensagem: {e}")
                 import traceback
-                print(traceback.format_exc())
+                logger.error(traceback.format_exc())
                 
     except requests.exceptions.RequestException as e:
-        print(f"Erro na requisição para a API do Telegram: {e}")
+        logger.error(f"Erro na requisição para a API do Telegram: {e}")
     except Exception as e:
-        print(f"Erro inesperado em process_messages: {e}")
+        logger.error(f"Erro inesperado em process_messages: {e}")
         import traceback
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
     
     return new_last_id
