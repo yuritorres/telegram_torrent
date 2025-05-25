@@ -63,50 +63,21 @@ O bot irá iniciar, conectar-se ao qBittorrent e começar a processar mensagens 
   - Em versões recentes: Exibe Total, Usado e Livre (via API `/api/v2/app/drive_info`).
   - Em versões antigas: Fallback para `/api/v2/sync/maindata` mostrando espaço livre.
 
-### Comandos do Jellyfin
+### Recursos Futuros - Integração com Jellyfin (Em Desenvolvimento)
 
-O bot oferece integração completa com o Jellyfin para gerenciamento de mídia através do módulo `jellyfin_telegram.py`.
+Estamos trabalhando na integração completa com o Jellyfin. Os seguintes recursos estão planejados para versões futuras:
 
-#### Gerenciamento de Mídia
-- `/jflib`: Lista todas as bibliotecas disponíveis no servidor Jellyfin.
-  - Exibe nome e tipo de cada biblioteca
-  - Mostra o número total de itens em cada biblioteca
-  - Indica o status de sincronização de cada biblioteca
+#### Gerenciamento de Mídia (Próximas versões)
+- `Em breve`: Listagem de bibliotecas e busca de conteúdo
+- `Planejado`: Visualização de itens recentes e detalhes
+- `Futuro`: Gerenciamento de sessões e usuários
 
-- `/jfsearch <termo>`: Pesquisa por conteúdo específico nas bibliotecas.
-  - Busca por títulos, atores, diretores e gêneros
-  - Suporta pesquisa parcial de termos
-  - Exibe resultados com detalhes básicos
+#### Status de Desenvolvimento
+- Integração básica em desenvolvimento
+- Testes iniciais em andamento
+- Lançamento previsto para versões beta futuras
 
-- `/jfrecent`: Mostra as adições mais recentes ao servidor.
-  - Lista os últimos conteúdos adicionados
-  - Inclui data de adição e detalhes do conteúdo
-  - Organiza por data de adição
-
-- `/jfinfo`: Exibe informações detalhadas sobre o servidor.
-  - Versão do servidor
-  - Status de operação
-  - Estatísticas de uso
-  - Informações de sistema
-
-- `/jfitem <id>`: Mostra detalhes completos de um item específico.
-  - Título e ano
-  - Duração e qualidade
-  - Elenco e equipe técnica
-  - Sinopse e classificação
-  - Informações técnicas do arquivo
-
-- `/jfsessions`: Lista todas as sessões ativas no servidor (requer privilégios de administrador).
-  - Usuários conectados
-  - Conteúdo em reprodução
-  - Dispositivo e qualidade de reprodução
-  - Tempo de conexão
-
-- `/jfhelp`: Exibe a lista completa de comandos disponíveis com suas descrições detalhadas.
-
-#### Notificações e Status
-- `/jstatus`: Verifica o status atual do servidor Jellyfin.
-- `/jnotif [on/off]`: Ativa ou desativa notificações de novos conteúdos.
+> ℹ️ **Acompanhe nosso [ROADMAP.md](ROADMAP.md) para atualizações sobre o cronograma de lançamento e recursos planejados.**
 
 ### Notificações Automáticas
 
