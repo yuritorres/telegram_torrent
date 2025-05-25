@@ -63,19 +63,27 @@ O bot irá iniciar, conectar-se ao qBittorrent e começar a processar mensagens 
   - Em versões recentes: Exibe Total, Usado e Livre (via API `/api/v2/app/drive_info`).
   - Em versões antigas: Fallback para `/api/v2/sync/maindata` mostrando espaço livre.
 
-### Recursos Futuros - Integração com Jellyfin (Em Desenvolvimento)
+### Comandos do Jellyfin
 
-Estamos trabalhando na integração completa com o Jellyfin. Os seguintes recursos estão planejados para versões futuras:
+#### Gerenciamento de Conteúdo
+- `/recent`: Lista os itens mais recentes adicionados ao Jellyfin
+  - Exibe os 5 itens mais recentes com detalhes formatados
+  - Mostra capa, título, ano, classificação e resumo
+  
+- `/libraries`: Lista todas as bibliotecas disponíveis no servidor Jellyfin
+  - Mostra o nome e tipo de cada biblioteca
+  - Útil para verificar acessos e organizações de mídia
+  
+- `/status`: Exibe o status atual do servidor Jellyfin
+  - Mostra informações de conexão
+  - Exibe contagem de bibliotecas
+  - Último item adicionado
+  - Status da conexão
 
-#### Gerenciamento de Mídia (Próximas versões)
-- `Em breve`: Listagem de bibliotecas e busca de conteúdo
-- `Planejado`: Visualização de itens recentes e detalhes
-- `Futuro`: Gerenciamento de sessões e usuários
-
-#### Status de Desenvolvimento
-- Integração básica em desenvolvimento
-- Testes iniciais em andamento
-- Lançamento previsto para versões beta futuras
+#### Recursos em Desenvolvimento
+- `Em breve`: Busca avançada na biblioteca
+- `Planejado`: Controle de permissões
+- `Futuro`: Notificações automáticas de novos conteúdos
 
 > ℹ️ **Acompanhe nosso [ROADMAP.md](ROADMAP.md) para atualizações sobre o cronograma de lançamento e recursos planejados.**
 
@@ -88,6 +96,19 @@ O bot enviará automaticamente notificações para:
 - Alertas de espaço em disco baixo
 - Atualizações de status do servidor Jellyfin
 - Sessões iniciadas ou finalizadas no Jellyfin
+
+## Configuração do Jellyfin
+
+Para habilitar os comandos do Jellyfin, adicione as seguintes variáveis ao seu arquivo `.env`:
+
+```env
+# Configurações do Jellyfin
+JELLYFIN_URL=http://seu-servidor-jellyfin:8096
+JELLYFIN_USERNAME=seu_usuario
+JELLYFIN_PASSWORD=sua_senha
+```
+
+Certifique-se de que o usuário tenha permissões adequadas no servidor Jellyfin para acessar as bibliotecas e informações do sistema.
 
 ## Versionamento
 
