@@ -12,6 +12,80 @@ from jellyfin_api import JellyfinAPI
 logger = logging.getLogger(__name__)
 
 class JellyfinTelegramBot:
+    # ... (restante do código)
+
+    def get_libraries_text(self):
+        try:
+            import asyncio
+            async def fetch():
+                async with JellyfinAPI(self.jellyfin_url, self.jellyfin_username, self.jellyfin_password) as api:
+                    libraries = await api.get_libraries()
+                    if not libraries:
+                        return "❌ Nenhuma biblioteca encontrada."
+                    text = "📚 **Bibliotecas Disponíveis:**\n\n"
+                    for lib in libraries:
+                        name = lib.get('Name', 'N/A')
+                        lib_type = lib.get('CollectionType', 'N/A')
+                        text += f"• {name} ({lib_type})\n"
+                    return text
+            return asyncio.run(fetch())
+        except Exception as e:
+            return f"❌ Erro ao buscar bibliotecas: {str(e)}"
+
+    def send_recent_items(self, chat_id, send_telegram_func):
+        try:
+            import asyncio
+            async def fetch():
+                async with JellyfinAPI(self.jellyfin_url, self.jellyfin_username, self.jellyfin_password) as api:
+                    items = await api.get_recent_items(5)
+                    if not items:
+                        send_telegram_func("❌ Nenhum item recente encontrado.", chat_id, parse_mode="Markdown")
+                        return
+                    for item in items:
+                        msg = self.format_item_info(item)
+                        send_telegram_func(msg, chat_id, parse_mode="Markdown")
+            asyncio.run(fetch())
+        except Exception as e:
+            send_telegram_func(f"❌ Erro ao buscar itens recentes: {str(e)}", chat_id, parse_mode="Markdown")
+
+    def get_recent_text(self):
+        try:
+            import asyncio
+            async def fetch():
+                async with JellyfinAPI(self.jellyfin_url, self.jellyfin_username, self.jellyfin_password) as api:
+                    items = await api.get_recent_items(5)
+                    if not items:
+                        return "❌ Nenhum item recente encontrado."
+                    result = ""
+                    for item in items:
+                        result += self.format_item_info(item) + "\n\n"
+                    return result.strip()
+            return asyncio.run(fetch())
+        except Exception as e:
+            return f"❌ Erro ao buscar itens recentes: {str(e)}"
+
+    def get_status_text(self):
+        try:
+            import asyncio
+            async def fetch():
+                async with JellyfinAPI(self.jellyfin_url, self.jellyfin_username, self.jellyfin_password) as api:
+                    libraries = await api.get_libraries()
+                    recent_items = await api.get_recent_items(1)
+                    status_text = f'''
+🟢 **Status do Servidor Jellyfin**
+
+🌐 Servidor: {self.jellyfin_url}
+👤 Usuário: {self.jellyfin_username}
+📚 Bibliotecas: {len(libraries)}
+🆕 Último item: {recent_items[0].get('Name', 'N/A') if recent_items else 'N/A'}
+
+✅ Conexão OK
+                    '''.strip()
+                    return status_text
+            return asyncio.run(fetch())
+        except Exception as e:
+            return f"❌ Erro ao buscar status do Jellyfin: {str(e)}"
+
     def __init__(self):
         load_dotenv()
         self.jellyfin_url = os.getenv('JELLYFIN_URL')

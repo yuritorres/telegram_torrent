@@ -20,6 +20,9 @@ def set_bot_commands():
         {"command": "start", "description": "Iniciar o bot"},
         {"command": "qespaco", "description": "Mostrar espaço em disco"},
         {"command": "qtorrents", "description": "Listar torrents"},
+        {"command": "recent", "description": "Ver itens recentes do Jellyfin"},
+        {"command": "libraries", "description": "Listar bibliotecas do Jellyfin"},
+        {"command": "status", "description": "Status do servidor Jellyfin"}
     ]
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setMyCommands"
     try:
@@ -42,13 +45,13 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
         bool: True se a mensagem foi enviada com sucesso, False caso contrário
     """
     if not TELEGRAM_BOT_TOKEN:
-        print("❌ Token do bot do Telegram não configurado")
+        print(" Token do bot do Telegram não configurado")
         return False
         
     if chat_id is None:
         chat_id = TELEGRAM_CHAT_ID
         if not chat_id:
-            print("❌ Nenhum chat_id fornecido e TELEGRAM_CHAT_ID não configurado")
+            print(" Nenhum chat_id fornecido e TELEGRAM_CHAT_ID não configurado")
             return False
     
     # Sanitiza a mensagem para evitar erros de formatação HTML
@@ -76,13 +79,13 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
         resp.raise_for_status()
         return True
     except requests.exceptions.RequestException as e:
-        print(f"❌ Erro ao enviar mensagem para o Telegram: {e}")
+        print(f" Erro ao enviar mensagem para o Telegram: {e}")
         # Tenta enviar novamente sem formatação HTML se ocorrer erro
         if parse_mode and parse_mode.upper() == "HTML":
             return send_telegram(msg, chat_id, parse_mode=None)
         return False
     except Exception as e:
-        print(f"❌ Erro inesperado ao enviar mensagem para o Telegram: {e}")
+        print(f" Erro inesperado ao enviar mensagem para o Telegram: {e}")
         return False
 
 def format_bytes(size: int) -> str:
@@ -115,7 +118,7 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
     """
     try:
         if sess is None:
-            return "❌ Não conectado ao qBittorrent."
+            return " Não conectado ao qBittorrent."
             
         # Obtém o caminho de salvamento padrão do qBittorrent
         prefs_resp = sess.get(f"{qb_url}/api/v2/app/preferences")
@@ -124,7 +127,7 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
         save_path = prefs_data.get('save_path')
         
         if not save_path:
-            return "❌ Caminho de salvamento do qBittorrent não encontrado."
+            return " Caminho de salvamento do qBittorrent não encontrado."
             
         # Tenta obter informações do disco via API do qBittorrent
         try:
@@ -136,7 +139,7 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
             used = total - free if total is not None and free is not None else None
             
             if total is not None and used is not None and free is not None:
-                return f"💾 Espaço em disco:\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                return f" Espaço em disco:\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
                 
         except Exception as e:
             # Se for erro 404, tenta usar fallback para /sync/maindata
@@ -159,20 +162,20 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
                                 used = total - free if free is not None else None
                                 
                                 if total is not None and used is not None:
-                                    return f"💾 Espaço em disco (local):\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                                    return f" Espaço em disco (local):\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
                             except Exception:
                                 pass
                         
-                        return f"💾 Espaço livre no disco: {format_bytes(free)}"
+                        return f" Espaço livre no disco: {format_bytes(free)}"
                 except Exception as inner_e:
-                    return f"❌ Erro ao obter espaço em disco: {str(inner_e)}"
+                    return f" Erro ao obter espaço em disco: {str(inner_e)}"
             
-            return f"❌ Erro ao obter espaço em disco: {str(e)}"
+            return f" Erro ao obter espaço em disco: {str(e)}"
             
     except Exception as e:
-        return f"❌ Erro ao obter informações de espaço em disco: {str(e)}"
+        return f" Erro ao obter informações de espaço em disco: {str(e)}"
     
-    return "❌ Não foi possível obter as informações de espaço em disco."
+    return " Não foi possível obter as informações de espaço em disco."
 
 def list_torrents(sess, qb_url: str) -> str:
     """
@@ -187,7 +190,7 @@ def list_torrents(sess, qb_url: str) -> str:
     """
     try:
         if sess is None:
-            return "❌ Não conectado ao qBittorrent."
+            return " Não conectado ao qBittorrent."
             
         from qbittorrent_api import fetch_torrents
         torrents = fetch_torrents(sess, qb_url)
@@ -214,25 +217,25 @@ def list_torrents(sess, qb_url: str) -> str:
         msg_parts = []
         
         if ativos:
-            msg_parts.append("<b>📥 Torrents Ativos:</b>\n" + "\n".join(f"• {t}" for t in ativos))
+            msg_parts.append("<b> Torrents Ativos:</b>\n" + "\n".join(f"• {t}" for t in ativos))
         else:
-            msg_parts.append("<b>📥 Torrents Ativos:</b> Nenhum")
+            msg_parts.append("<b> Torrents Ativos:</b> Nenhum")
             
         if pausados:
-            msg_parts.append("\n<b>⏸️ Torrents Pausados:</b>\n" + "\n".join(f"• {t}" for t in pausados))
+            msg_parts.append("\n<b> Torrents Pausados:</b>\n" + "\n".join(f"• {t}" for t in pausados))
             
         if finalizados:
-            msg_parts.append("\n<b>✅ Torrents Finalizados:</b>\n" + "\n".join(f"• {t}" for t in finalizados))
+            msg_parts.append("\n<b> Torrents Finalizados:</b>\n" + "\n".join(f"• {t}" for t in finalizados))
             
         if parados:
-            msg_parts.append("\n<b>⚠️  Torrents com Erro/Parados:</b>\n" + "\n".join(f"• {t}" for t in parados))
+            msg_parts.append("\n<b> Torrents com Erro/Parados:</b>\n" + "\n".join(f"• {t}" for t in parados))
         
         return "\n".join(msg_parts) if msg_parts else "Nenhum torrent encontrado."
         
     except Exception as e:
-        return f"❌ Erro ao listar torrents: {str(e)}"
+        return f" Erro ao listar torrents: {str(e)}"
 
-def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_url: str) -> int:
+def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_url: str, jellyfin_bot=None) -> int:
     """
     Processa as mensagens recebidas do Telegram.
     
@@ -241,12 +244,13 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
         last_update_id: ID da última atualização processada
         add_magnet_func: Função para adicionar um magnet link
         qb_url: URL base da API do qBittorrent
+        jellyfin_bot: Instância do JellyfinTelegramBot (opcional)
         
     Returns:
         int: ID da última atualização processada
     """
     if not TELEGRAM_BOT_TOKEN:
-        print("❌ Token do bot do Telegram não configurado")
+        print(" Token do bot do Telegram não configurado")
         return last_update_id
         
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
@@ -258,7 +262,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
         data = resp.json()
         
         if not data.get('ok', False):
-            print(f"❌ Resposta inesperada da API do Telegram: {data}")
+            print(f" Resposta inesperada da API do Telegram: {data}")
             return last_update_id
             
         updates = data.get('result', [])
@@ -287,11 +291,14 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 # Processa comandos
                 if text == "/start":
                     welcome_msg = (
-                        "👋 *Bem-vindo ao Bot de Gerenciamento de Torrents*\n\n"
-                        "📌 *Comandos disponíveis:*\n"
+                        " *Bem-vindo ao Bot de Gerenciamento de Torrents*\n\n"
+                        " *Comandos disponíveis:*\n"
                         "/qespaco - Mostra o espaço em disco\n"
                         "/qtorrents - Lista todos os torrents\n"
-                        "\n📥 *Para baixar:*\n"
+                        "/recent - Itens recentes do Jellyfin\n"
+                        "/libraries - Lista bibliotecas do Jellyfin\n"
+                        "/status - Status do servidor Jellyfin\n"
+                        "\n *Para baixar:*\n"
                         "Envie um link magnet ou .torrent"
                     )
                     send_telegram(welcome_msg, chat_id, parse_mode="Markdown")
@@ -304,11 +311,33 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     
                 elif text == "/qtorrents":
                     if not is_authorized:
-                        send_telegram("❌ Você não tem permissão para executar este comando.", chat_id)
+                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
                         continue
                         
                     torrents_list = list_torrents(sess, qb_url)
                     send_telegram(torrents_list, chat_id)
+                    continue
+                
+                # Comandos do Jellyfin
+                elif text == "/recent" and jellyfin_bot:
+                    if not is_authorized:
+                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
+                        continue
+                    jellyfin_bot.send_recent_items(chat_id, send_telegram)
+                    continue
+                
+                elif text == "/libraries" and jellyfin_bot:
+                    if not is_authorized:
+                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
+                        continue
+                    send_telegram(jellyfin_bot.get_libraries_text(), chat_id, parse_mode="Markdown")
+                    continue
+                
+                elif text == "/status" and jellyfin_bot:
+                    if not is_authorized:
+                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
+                        continue
+                    send_telegram(jellyfin_bot.get_status_text(), chat_id, parse_mode="Markdown")
                     continue
                 
                 # Processa links magnet
@@ -317,6 +346,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 
                 for magnet in magnets:
                     if not is_authorized:
+                        send_telegram(" Você não tem permissão para adicionar torrents.", chat_id)
                         send_telegram("❌ Você não tem permissão para adicionar torrents.", chat_id)
                         continue
                         

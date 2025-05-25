@@ -2,9 +2,11 @@
 import time
 import os
 import threading
+import asyncio
 import requests
 from dotenv import load_dotenv
 from telegram_utils import send_telegram, process_messages, set_bot_commands
+from jellyfin_telegram import JellyfinTelegramBot
 
 # Carrega as variáveis de ambiente
 load_dotenv()
@@ -42,11 +44,19 @@ def main():
     
     last_update_id = 0
     
+    # Inicializa o bot do Jellyfin
+    try:
+        jellyfin_bot = JellyfinTelegramBot()
+        print("Bot do Jellyfin inicializado com sucesso.")
+    except Exception as e:
+        print(f"Erro ao inicializar o bot do Jellyfin: {e}")
+        jellyfin_bot = None
+    
     def mensagens_thread():
         nonlocal last_update_id, sess
         while True:
             try:
-                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL)
+                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_bot)
                 time.sleep(1)
             except Exception as e:
                 print(f"Erro no processamento de mensagens: {e}")
