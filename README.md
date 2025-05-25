@@ -41,12 +41,25 @@ python main.py
 
 O bot irá iniciar, conectar-se ao qBittorrent e começar a processar mensagens do Telegram e enviar atualizações de status.
 
+## Interface do Usuário
+
+### Teclado Personalizado
+
+O bot agora inclui um teclado personalizado que aparece na parte inferior do chat, fornecendo acesso rápido aos comandos mais usados:
+
+- 📊 **Status do Servidor**: Verifica o status do servidor Jellyfin
+- 📦 **Listar Torrents**: Mostra a lista de torrents ativos
+- 💾 **Espaço em Disco**: Exibe o espaço em disco disponível
+- 🎬 **Itens Recentes**: Lista os itens adicionados recentemente ao Jellyfin
+- 📚 **Bibliotecas**: Mostra as bibliotecas disponíveis no Jellyfin
+- ❓ **Ajuda**: Exibe a mensagem de ajuda com todos os comandos
+
 ## Comandos Disponíveis
 
 ### Comandos Gerais
 
-- `/start`: Inicia a interação com o bot e exibe mensagem de boas-vindas.
-- `/help`: Exibe a lista completa de comandos disponíveis e suas descrições.
+- `/start`: Inicia a interação com o bot e exibe mensagem de boas-vindas com o teclado personalizado
+- `/help` ou clique em ❓ **Ajuda**: Exibe a lista completa de comandos disponíveis e suas descrições
 
 ### Comandos do qBittorrent
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.0.1.2.fix1-alpha - 2025-05-25
+
+### feat
+- Adicionado teclado personalizado com botões de acesso rápido
+- Novos atalhos para comandos frequentes
+- Melhorias na experiência do usuário
+- Integração do teclado com todos os comandos existentes
+
+### refactor
+- Otimização do código para melhor desempenho
+- Melhor tratamento de erros para comandos do teclado
+- Ajustes na formatação das mensagens
+
 ## v0.0.1.2-alpha - 2025-05-25
 
 ### feat
