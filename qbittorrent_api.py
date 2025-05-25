@@ -2,15 +2,23 @@ import requests
 import re
 from urllib.parse import urlparse, parse_qs
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 def login_qb(qb_url, qb_user, qb_pass):
     sess = requests.Session()
     data = {"username": qb_user, "password": qb_pass}
-    resp = sess.post(f"{qb_url}/api/v2/auth/login", data=data)
-    resp.raise_for_status()
-    if resp.text != "Ok.":
-        raise Exception("Falha no login do qBittorrent")
-    return sess
-
+    try:
+        resp = sess.post(f"{qb_url}/api/v2/auth/login", data=data)
+        resp.raise_for_status()
+        if resp.text != "Ok.":
+            logger.error("Falha no login do qBittorrent")
+            raise Exception("Falha no login do qBittorrent")
+        return sess
+    except Exception as e:
+        logger.error(f"Erro ao autenticar no qBittorrent: {e}")
+        raise
 def fetch_torrents(sess, qb_url):
     resp = sess.get(f"{qb_url}/api/v2/torrents/info")
     resp.raise_for_status()

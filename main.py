@@ -4,9 +4,13 @@ import os
 import threading
 import asyncio
 import requests
+import logging
 from dotenv import load_dotenv
 from telegram_utils import send_telegram, process_messages, set_bot_commands
 from jellyfin_telegram import JellyfinTelegramBot
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Carrega as variáveis de ambiente
 load_dotenv()
@@ -35,21 +39,21 @@ def main():
     if QBITTORRENT_AVAILABLE:
         try:
             sess = login_qb(QB_URL, QB_USER, QB_PASS)
-            print("Conexão com qBittorrent estabelecida com sucesso.")
+            logger.info("Conexão com qBittorrent estabelecida com sucesso.")
         except Exception as e:
-            print(f"❌ Não foi possível conectar ao qBittorrent: {e}")
+            logger.error(f"❌ Não foi possível conectar ao qBittorrent: {e}")
             send_telegram("❌ Não foi possível se conectar ao qBittorrent. O bot continuará funcional, mas sem integração com o qBittorrent.")
     else:
-        print("Módulos do qBittorrent não disponíveis. O bot será executado sem integração com o qBittorrent.")
+        logger.warning("Módulos do qBittorrent não disponíveis. O bot será executado sem integração com o qBittorrent.")
     
     last_update_id = 0
     
     # Inicializa o bot do Jellyfin
     try:
         jellyfin_bot = JellyfinTelegramBot()
-        print("Bot do Jellyfin inicializado com sucesso.")
+        logger.info("Bot do Jellyfin inicializado com sucesso.")
     except Exception as e:
-        print(f"Erro ao inicializar o bot do Jellyfin: {e}")
+        logger.error(f"Erro ao inicializar o bot do Jellyfin: {e}")
         jellyfin_bot = None
     
     def mensagens_thread():
@@ -90,10 +94,10 @@ def main():
     except KeyboardInterrupt:
         print("\nEncerrando o bot...")
     except Exception as e:
-        print(f"Erro inesperado: {e}")
+        logger.error(f"Erro inesperado: {e}")
     finally:
-        print("Bot encerrado.")
+        logger.info("Bot encerrado.")
 
 if __name__ == "__main__":
-    print("Iniciando o bot de gerenciamento de torrents...")
+    logger.info("Iniciando o bot de gerenciamento de torrents...")
     main()

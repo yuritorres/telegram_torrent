@@ -1,6 +1,10 @@
 import time
+import logging
 from telegram_utils import send_and_expire_status
 from telegram_utils import send_telegram
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def monitor_torrents(sess, qb_url, fetch_torrents_func, resumo_torrents_func, intervalo):
     last_status_time = 0
