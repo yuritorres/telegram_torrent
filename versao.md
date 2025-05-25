@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.0.0 - 2025-05-25
+
+### refactor
+
+- Removida a integração com Jellyfin e o código relacionado foi movido para um diretório de arquivo
+- Melhorada a estrutura do código para focar exclusivamente na funcionalidade do qBittorrent
+- Adicionadas anotações de tipo e documentação detalhada das funções
+- Melhorado o tratamento de erros e mensagens de log
+
+### feat
+
+- Adicionada formatação aprimorada para listas de torrents, mostrando o progresso de downloads ativos
+- Melhorada a mensagem de boas-vindas com comandos disponíveis
+- Adicionado suporte a Markdown além de HTML nas mensagens
+- Implementado timeout em todas as requisições HTTP
+
 ## v0.2.0.4 - 2025-05-19
 
 ### docs
