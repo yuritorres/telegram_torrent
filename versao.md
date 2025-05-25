@@ -1,8 +1,23 @@
 # Changelog
 
+## v0.0.1.2-alpha - 2025-05-24
+
+### feat
+- Reintegração completa com Jellyfin
+- Novos comandos: `/recent`, `/libraries`, `/status`
+- Exibição de itens recentes em mensagens individuais
+- Suporte a Markdown nas mensagens do Jellyfin
+
+### refactor
+- Melhorada a estrutura do código para suportar múltiplos serviços
+- Sistema de autenticação unificado
+- Tratamento de erros aprimorado
+
+## v0.0.1.1-alpha - 2025-05-24
+
 ## Sobre a Numeração de Versões
 
-A partir de 24/05/2025, adotamos o versionamento semântico (SemVer) para melhor controle das alterações. A versão estável atual é `v0.0.1.1-alpha`.
+A partir da versão v0.0.1.0-alpha de 24/05/2025, adotamos o versionamento semântico (SemVer) para melhor controle das alterações.
 
 ### Legado (Histórico de Desenvolvimento)
 

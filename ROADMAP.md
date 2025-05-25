@@ -6,20 +6,22 @@
 ---
 
 ## Versão Atual
-- **v0.0.1.1-alpha** (24/05/2025)
-  - Menu de comandos do Telegram
-  - Comandos básicos do qBittorrent
-  - Suporte inicial a notificações
+- **v0.0.1.2-alpha** (25/05/2025)
+  - Reintegração com Jellyfin
+  - Novos comandos: `/recent`, `/libraries`, `/status`
+  - Exibição de itens recentes em mensagens individuais
+  - Suporte a Markdown nas mensagens
 
 ## Próximas Versões Alpha (Desenvolvimento Ativo)
 
-### v0.0.2-alpha (Próxima)
-- [ ] Reintegração básica com Jellyfin
-- [ ] Comandos para gerenciar biblioteca do Jellyfin
-- [ ] Notificações de novos conteúdos adicionados
+### v0.0.1.3-alpha (Próxima)
+- [x] ~~Reintegração básica com Jellyfin~~
+- [x] ~~Comandos básicos do Jellyfin (/recent, /libraries, /status)~~
+- [ ] Busca avançada na biblioteca do Jellyfin
 - [ ] Controle de permissões para comandos do Jellyfin
+- [ ] Notificações de novos conteúdos adicionados
 
-### v0.0.3-alpha (Em breve)
+### v0.0.1.4-alpha (Em breve)
 - [ ] Sincronização de status entre qBittorrent e Jellyfin
 - [ ] Busca integrada nos conteúdos do Jellyfin
 - [ ] Suporte a múltiplos servidores Jellyfin
