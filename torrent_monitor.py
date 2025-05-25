@@ -1,4 +1,5 @@
 import time
+from telegram_utils import send_and_expire_status
 from telegram_utils import send_telegram
 
 def monitor_torrents(sess, qb_url, fetch_torrents_func, resumo_torrents_func, intervalo):
@@ -25,7 +26,7 @@ def monitor_torrents(sess, qb_url, fetch_torrents_func, resumo_torrents_func, in
             current_time = time.time()
             if current_time - last_status_time >= intervalo:
                 resumo = resumo_torrents_func(current_torrents)
-                send_telegram(f"📊 <b>Status do qBittorrent</b>\n\n{resumo}")
+                send_and_expire_status(f"📊 <b>Status do qBittorrent</b>\n\n{resumo}")
                 last_status_time = current_time
         except Exception as e:
             send_telegram(f"❗️ Erro crítico: {str(e)}")

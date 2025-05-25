@@ -3,6 +3,7 @@ import os
 import re
 from dotenv import load_dotenv
 from typing import Optional, List, Dict, Any, Union, Callable
+import threading
 
 # Carrega as variáveis de ambiente
 load_dotenv()
@@ -31,6 +32,42 @@ def set_bot_commands():
         print("Comandos do bot registrados com sucesso no Telegram.")
     except Exception as e:
         print(f"Erro ao registrar comandos do bot: {e}")
+
+EXPIRAR_MSG = int(os.getenv('EXPIRAR_MSG', 30))
+
+def send_and_expire_status(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mode: str = "HTML", expirar: int = None) -> bool:
+    """
+    Envia uma mensagem de status do qBittorrent e agenda a exclusão após expirar segundos.
+    """
+    if expirar is None:
+        expirar = EXPIRAR_MSG
+    if not TELEGRAM_BOT_TOKEN:
+        print(" Token do bot do Telegram não configurado")
+        return False
+    if chat_id is None:
+        chat_id = TELEGRAM_CHAT_ID
+        if not chat_id:
+            print(" Nenhum chat_id fornecido e TELEGRAM_CHAT_ID não configurado")
+            return False
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    data = {"chat_id": chat_id, "text": msg, "parse_mode": parse_mode}
+    try:
+        resp = requests.post(url, json=data, timeout=10)
+        resp.raise_for_status()
+        message_id = resp.json()["result"]["message_id"]
+        # Agenda a exclusão
+        threading.Timer(expirar, delete_message, args=(chat_id, message_id)).start()
+        return True
+    except Exception as e:
+        print(f"Erro ao enviar mensagem de status: {e}")
+        return False
+
+def delete_message(chat_id, message_id):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteMessage"
+    try:
+        requests.post(url, json={"chat_id": chat_id, "message_id": message_id}, timeout=10)
+    except Exception as e:
+        print(f"Erro ao apagar mensagem: {e}")
 
 def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mode: str = "HTML") -> bool:
     """
@@ -301,21 +338,21 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                         "\n *Para baixar:*\n"
                         "Envie um link magnet ou .torrent"
                     )
-                    send_telegram(welcome_msg, chat_id, parse_mode="Markdown")
+                    send_and_expire_status(welcome_msg, chat_id, parse_mode="Markdown")
                     continue
                     
                 elif text == "/qespaco":
                     disk_info = get_disk_space_info(sess, qb_url, chat_id)
-                    send_telegram(disk_info, chat_id)
+                    send_and_expire_status(disk_info, chat_id)
                     continue
                     
                 elif text == "/qtorrents":
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
+                        send_and_expire_status(" Você não tem permissão para executar este comando.", chat_id)
                         continue
-                        
+                    
                     torrents_list = list_torrents(sess, qb_url)
-                    send_telegram(torrents_list, chat_id)
+                    send_and_expire_status(torrents_list, chat_id)
                     continue
                 
                 # Comandos do Jellyfin
