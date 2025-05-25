@@ -1,5 +1,19 @@
 # Changelog
 
+## Sobre a Numeração de Versões
+
+A partir de 24/05/2025, adotamos o versionamento semântico (SemVer) para melhor controle das alterações. A versão estável atual é `v0.0.1.1-alpha`.
+
+### Legado (Histórico de Desenvolvimento)
+
+As versões anteriores (v0.1.x até v0.3.x) representam o histórico de desenvolvimento interno. A numeração foi reiniciada para refletir melhor o ciclo de lançamentos oficiais.
+
+---
+
+## Próximas Versões (a partir de v0.0.1-alpha)
+
+*Nota: A versão alpha está em desenvolvimento ativo. Consulte as notas de versão para mudanças recentes.*
+
 ## v0.0.1.1-alpha - 2025-05-24
 
 ### feat
