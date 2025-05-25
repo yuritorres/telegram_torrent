@@ -32,41 +32,37 @@ class JellyfinTelegramBot:
         except Exception as e:
             return f"❌ Erro ao buscar bibliotecas: {str(e)}"
 
-    def send_recent_items(self, chat_id, send_telegram_func):
+    def list_libraries(self, chat_id, send_telegram_func, use_keyboard=False):
         try:
             import asyncio
             from telegram import InlineKeyboardButton, InlineKeyboardMarkup
             async def fetch():
                 async with JellyfinAPI(self.jellyfin_url, self.jellyfin_username, self.jellyfin_password) as api:
-                    items = await api.get_recent_items(5)
-                    if not items:
-                        send_telegram_func("❌ Nenhum item recente encontrado.", chat_id, parse_mode="Markdown")
+                    libraries = await api.get_libraries()
+                    if not libraries:
+                        send_telegram_func("❌ Nenhuma biblioteca encontrada.", chat_id, parse_mode="Markdown", use_keyboard=use_keyboard)
                         return
-                    for item in items[:5]:
-                        msg = self.format_item_info(item)
-                        # Botões inline
-                        keyboard = [
-                            [
-                                InlineKeyboardButton("✅ Marcar Assistido", callback_data=f"watch_{item['Id']}"),
-                                InlineKeyboardButton("⏸️ Marcar Não Assistido", callback_data=f"unwatch_{item['Id']}")
-                            ],
-                            [InlineKeyboardButton("ℹ️ Mais Detalhes", callback_data=f"details_{item['Id']}")]
+                    libraries_text = "📚 **Bibliotecas Disponíveis:**\n\n"
+                    for lib in libraries:
+                        name = lib.get('Name', 'N/A')
+                        lib_type = lib.get('CollectionType', 'N/A')
+                        libraries_text += f"• {name} ({lib_type})\n"
+                    keyboard = [
+                        [
+                            {"text": "ℹ️ Mais Detalhes", "callback_data": f"details_{lib['Id']}"}
                         ]
-                        reply_markup = {
-                            "inline_keyboard": [
-                                [
-                                    {"text": "✅ Marcar Assistido", "callback_data": f"watch_{item['Id']}"},
-                                    {"text": "⏸️ Marcar Não Assistido", "callback_data": f"unwatch_{item['Id']}"}
-                                ],
-                                [
-                                    {"text": "ℹ️ Mais Detalhes", "callback_data": f"details_{item['Id']}"}
-                                ]
+                    ]
+                    reply_markup = {
+                        "inline_keyboard": [
+                            [
+                                {"text": "ℹ️ Mais Detalhes", "callback_data": f"details_{lib['Id']}"}
                             ]
-                        }
-                        send_telegram_func(msg, chat_id, parse_mode="Markdown", reply_markup=reply_markup)
+                        ]
+                    }
+                    send_telegram_func(libraries_text, chat_id, parse_mode="Markdown", reply_markup=reply_markup, use_keyboard=use_keyboard)
             asyncio.run(fetch())
         except Exception as e:
-            send_telegram_func(f"❌ Erro ao buscar itens recentes: {str(e)}", chat_id, parse_mode="Markdown")
+            send_telegram_func(f"❌ Erro ao buscar bibliotecas: {str(e)}", chat_id, parse_mode="Markdown", use_keyboard=use_keyboard)
 
     def get_recent_text(self):
         try:

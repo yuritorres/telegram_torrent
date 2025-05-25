@@ -69,7 +69,26 @@ def delete_message(chat_id, message_id):
     except Exception as e:
         print(f"Erro ao apagar mensagem: {e}")
 
-def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mode: str = "HTML", reply_markup: dict = None) -> bool:
+def get_main_keyboard() -> dict:
+    """
+    Cria um teclado personalizado com os principais comandos.
+    
+    Returns:
+        dict: Teclado personalizado no formato da API do Telegram
+    """
+    keyboard = {
+        'keyboard': [
+            [{'text': '📊 Status do Servidor'}],
+            [{'text': '📦 Listar Torrents'}, {'text': '💾 Espaço em Disco'}],
+            [{'text': '🎬 Itens Recentes'}, {'text': '📚 Bibliotecas'}],
+            [{'text': '❓ Ajuda'}]
+        ],
+        'resize_keyboard': True,
+        'one_time_keyboard': False
+    }
+    return keyboard
+
+def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mode: str = "HTML", reply_markup: dict = None, use_keyboard: bool = False) -> bool:
     """
     Envia uma mensagem para o Telegram.
     
@@ -78,6 +97,7 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
         chat_id: ID do chat do destinatário (opcional, usa TELEGRAM_CHAT_ID se não fornecido)
         parse_mode: Modo de análise da mensagem (HTML ou Markdown)
         reply_markup: Dicionário de botões inline (opcional)
+        use_keyboard: Se True, adiciona o teclado personalizado à mensagem
     Returns:
         bool: True se a mensagem foi enviada com sucesso, False caso contrário
     """
@@ -105,15 +125,17 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
     if len(msg) > 4096:
         msg = msg[:4093] + "..."
     
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    data = {"chat_id": str(chat_id), "text": msg}
+    if parse_mode:
+        data["parse_mode"] = parse_mode
+    if reply_markup:
+        data["reply_markup"] = reply_markup
+    elif use_keyboard:
+        data["reply_markup"] = get_main_keyboard()
+    
     try:
-        import json
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        data = {"chat_id": str(chat_id), "text": msg}
-        if parse_mode:
-            data["parse_mode"] = parse_mode
-        if reply_markup:
-            data["reply_markup"] = json.dumps(reply_markup)
-        resp = requests.post(url, data=data, timeout=10)
+        resp = requests.post(url, json=data, timeout=10)
         resp.raise_for_status()
         return True
     except requests.exceptions.RequestException as e:
@@ -326,56 +348,74 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 # Verifica se o usuário está autorizado para comandos críticos
                 is_authorized = not AUTHORIZED_USERS or user_id in AUTHORIZED_USERS
                 
+                # Processa comandos do teclado
+                if text == "📊 Status do Servidor":
+                    text = "/status"
+                elif text == "📦 Listar Torrents":
+                    text = "/qtorrents"
+                elif text == "💾 Espaço em Disco":
+                    text = "/qespaco"
+                elif text == "🎬 Itens Recentes":
+                    text = "/recent"
+                elif text == "📚 Bibliotecas":
+                    text = "/libraries"
+                elif text == "❓ Ajuda":
+                    text = "/start"
+                
+                # Verifica se o usuário está autorizado para comandos críticos
+                is_authorized = not AUTHORIZED_USERS or user_id in AUTHORIZED_USERS
+                
                 # Processa comandos
-                if text == "/start":
-                    welcome_msg = (
-                        " *Bem-vindo ao Bot de Gerenciamento de Torrents*\n\n"
-                        " *Comandos disponíveis:*\n"
-                        "/qespaco - Mostra o espaço em disco\n"
-                        "/qtorrents - Lista todos os torrents\n"
-                        "/recent - Itens recentes do Jellyfin\n"
-                        "/libraries - Lista bibliotecas do Jellyfin\n"
-                        "/status - Status do servidor Jellyfin\n"
-                        "\n *Para baixar:*\n"
-                        "Envie um link magnet ou .torrent"
-                    )
-                    send_and_expire_status(welcome_msg, chat_id, parse_mode="Markdown")
+                if text == "/start" or text == "❓ Ajuda":
+                    WELCOME_MESSAGE = """
+                    🤖 *Bem-vindo ao Bot de Gerenciamento de Mídia* 🤖
+                    
+                    *Comandos disponíveis:*
+                    - /start - Mostrar esta mensagem
+                    - /qespaco - Mostrar espaço em disco
+                    - /qtorrents - Listar torrents ativos
+                    - /recent - Ver itens recentes do Jellyfin
+                    - /libraries - Listar bibliotecas do Jellyfin
+                    - /status - Status do servidor Jellyfin
+                    
+                    Ou use os botões abaixo para navegar facilmente!"""
+                    send_telegram(WELCOME_MESSAGE, chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
                     
                 elif text == "/qespaco":
                     disk_info = get_disk_space_info(sess, qb_url, chat_id)
-                    send_and_expire_status(disk_info, chat_id)
+                    send_telegram(disk_info, chat_id, parse_mode="HTML", use_keyboard=True)
                     continue
                     
                 elif text == "/qtorrents":
                     if not is_authorized:
-                        send_and_expire_status(" Você não tem permissão para executar este comando.", chat_id)
+                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
                         continue
                     
                     torrents_list = list_torrents(sess, qb_url)
-                    send_and_expire_status(torrents_list, chat_id)
+                    send_telegram(torrents_list, chat_id, parse_mode="HTML", use_keyboard=True)
                     continue
                 
                 # Comandos do Jellyfin
                 elif text == "/recent" and jellyfin_bot:
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
+                        send_telegram(" Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
-                    jellyfin_bot.send_recent_items(chat_id, send_telegram)
+                    jellyfin_bot.send_recent_items(chat_id, send_telegram, use_keyboard=True)
                     continue
                 
                 elif text == "/libraries" and jellyfin_bot:
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
+                        send_telegram(" Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
-                    send_telegram(jellyfin_bot.get_libraries_text(), chat_id, parse_mode="Markdown")
+                    jellyfin_bot.list_libraries(chat_id, send_telegram, use_keyboard=True)
                     continue
                 
                 elif text == "/status" and jellyfin_bot:
                     if not is_authorized:
-                        send_telegram(" Você não tem permissão para executar este comando.", chat_id)
+                        send_telegram(" Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
-                    send_telegram(jellyfin_bot.get_status_text(), chat_id, parse_mode="Markdown")
+                    send_telegram(jellyfin_bot.get_status_text(), chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
                 
                 # Processa links magnet
