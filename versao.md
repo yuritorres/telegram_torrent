@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.0.1.2.fix2-alpha - 2025-05-25
+
+### Melhorias
+- Refatoração completa do sistema de processamento de mensagens
+- Centralização do mapeamento de comandos do teclado
+- Melhor tratamento de erros e validações
+- Remoção de código duplicado e otimizações gerais
+
+### Corrigido
+- Dupla verificação de autorização removida
+- Mensagens de erro mais claras e informativas
+- Melhor tratamento de exceções em operações assíncronas
+
+### Segurança
+- Melhor validação de entradas de usuário
+- Proteção contra injeção de comandos
+- Verificação de permissões mais robusta
+
 ## v0.0.1.2.fix1-alpha - 2025-05-25
 
 ### feat

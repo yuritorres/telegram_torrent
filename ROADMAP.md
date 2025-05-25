@@ -6,6 +6,19 @@
 ---
 
 ## Versão Atual
+- **v0.0.1.2.fix2-alpha** (25/05/2025)
+  - Refatoração completa do processamento de mensagens
+  - Centralização do mapeamento de comandos do teclado
+  - Melhor tratamento de erros e validações
+  - Remoção de código duplicado
+  - Mensagens de erro mais claras e informativas
+  - Verificação de permissões mais robusta
+
+- **v0.0.1.2.fix1-alpha** (25/05/2025)
+  - Teclado personalizado com botões de acesso rápido
+  - Melhorias na experiência do usuário
+  - Otimizações de desempenho
+
 - **v0.0.1.2-alpha** (25/05/2025)
   - Reintegração com Jellyfin
   - Novos comandos: `/recent`, `/libraries`, `/status`

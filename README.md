@@ -45,8 +45,9 @@ O bot irá iniciar, conectar-se ao qBittorrent e começar a processar mensagens 
 
 ### Teclado Personalizado
 
-O bot agora inclui um teclado personalizado que aparece na parte inferior do chat, fornecendo acesso rápido aos comandos mais usados:
+O bot inclui um teclado personalizado que aparece na parte inferior do chat, fornecendo acesso rápido aos comandos mais usados. O teclado é ativado automaticamente após o comando `/start`.
 
+#### Comandos Rápidos:
 - 📊 **Status do Servidor**: Verifica o status do servidor Jellyfin
 - 📦 **Listar Torrents**: Mostra a lista de torrents ativos
 - 💾 **Espaço em Disco**: Exibe o espaço em disco disponível
