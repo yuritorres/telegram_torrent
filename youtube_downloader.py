@@ -494,51 +494,83 @@ class TelegramBotExample:
                 temp_path = temp_file.name
             
             try:
-                # Build yt-dlp command
+                # Build yt-dlp command with more reliable options
                 cmd = [
                     'yt-dlp',
-                    '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                    '-f', 'best[ext=mp4][filesize<50M]',  # Try to get best MP4 under 50MB
                     '--merge-output-format', 'mp4',
-                    '-o', temp_path,
+                    '--output', temp_path,
                     '--no-playlist',
                     '--no-warnings',
                     '--no-call-home',
-                    '--no-progress',
+                    '--newline',
                     '--no-check-certificate',
                     '--prefer-ffmpeg',
                     '--ffmpeg-location', 'ffmpeg',
+                    '--force-overwrites',
+                    '--retries', '3',
+                    '--fragment-retries', '3',
+                    '--buffer-size', '16K',
+                    '--http-chunk-size', '1M',
                     video_info.get('webpage_url', url)
                 ]
                 
-                # Run yt-dlp
-                process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
+                logger.info(f"Starting download with command: {' '.join(cmd)}")
+                
+                # Run yt-dlp with a timeout
+                try:
+                    process = await asyncio.wait_for(
+                        asyncio.create_subprocess_exec(
+                            *cmd,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        ),
+                        timeout=300  # 5 minutes timeout for the download
+                    )
+                except asyncio.TimeoutError:
+                    raise Exception("O download demorou muito tempo e foi cancelado")
                 
                 # Monitor progress
                 last_update = 0
                 start_time = time.time()
+                last_size = 0
                 
                 while True:
-                    await asyncio.sleep(1)  # Update progress every second
-                    
-                    # Check if process is done
+                    # Check process status
                     if process.returncode is not None:
                         if process.returncode != 0:
-                            error = await process.stderr.read()
-                            raise Exception(f"Erro no yt-dlp: {error.decode('utf-8', 'ignore')}")
+                            error_output = await process.stderr.read()
+                            error_msg = error_output.decode('utf-8', 'ignore')
+                            logger.error(f"yt-dlp error: {error_msg}")
+                            
+                            # Try to get a more specific error message
+                            if "Video unavailable" in error_msg:
+                                raise Exception("Vídeo indisponível ou restrito")
+                            elif "Private video" in error_msg:
+                                raise Exception("Este vídeo é privado")
+                            elif "Sign in" in error_msg:
+                                raise Exception("Este vídeo requer login ou é restrito por idade")
+                            else:
+                                raise Exception(f"Erro ao baixar o vídeo (código {process.returncode})")
                         break
                     
-                    # Update progress message every 5 seconds
+                    # Update progress every 3 seconds
                     current_time = time.time()
-                    if current_time - last_update >= 5:
-                        if os.path.exists(temp_path):
+                    if current_time - last_update >= 3 and os.path.exists(temp_path):
+                        try:
                             file_size = os.path.getsize(temp_path)
                             file_size_mb = file_size / (1024 * 1024)
                             elapsed = int(current_time - start_time)
-                            speed = file_size / (1024 * (current_time - start_time)) if (current_time - start_time) > 0 else 0
+                            
+                            # Calculate download speed
+                            if last_size > 0 and elapsed > 0:
+                                speed = (file_size - last_size) / (1024 * (current_time - last_update))
+                                speed_str = f"{speed:.1f} KB/s"
+                            else:
+                                speed_str = "Calculando..."
+                            
+                            last_size = file_size
+                            last_update = current_time
                             
                             await self.application.bot.edit_message_text(
                                 chat_id=download_info['chat_id'],
@@ -547,11 +579,14 @@ class TelegramBotExample:
                                     f"📥 *Baixando vídeo...*\n\n"
                                     f"📺 *{download_info['title']}*\n"
                                     f"💾 {file_size_mb:.1f}MB baixados\n"
-                                    f"⚡ {speed:.1f} KB/s • 🕒 {elapsed}s"
+                                    f"⚡ {speed_str} • 🕒 {elapsed}s"
                                 ),
                                 parse_mode='Markdown'
                             )
-                        last_update = current_time
+                        except Exception as e:
+                            logger.warning(f"Error updating progress: {e}")
+                    
+                    await asyncio.sleep(1)  # Check every second
                 
                 # Check if file exists and has content
                 if not os.path.exists(temp_path):
