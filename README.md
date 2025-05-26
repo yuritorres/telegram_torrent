@@ -49,6 +49,7 @@ O bot inclui um teclado personalizado que aparece na parte inferior do chat, for
 
 #### Comandos Rápidos:
 - 📊 **Status do Servidor**: Verifica o status do servidor Jellyfin
+- 🆕 **Itens Recentes**: Exibe os itens adicionados recentemente ao Jellyfin (comando: `/recentes`)
 - 📦 **Listar Torrents**: Mostra a lista de torrents ativos
 - 💾 **Espaço em Disco**: Exibe o espaço em disco disponível
 - 🎬 **Itens Recentes**: Lista os itens adicionados recentemente ao Jellyfin
@@ -80,9 +81,14 @@ O bot inclui um teclado personalizado que aparece na parte inferior do chat, for
 ### Comandos do Jellyfin
 
 #### Gerenciamento de Conteúdo
-- `/recent`: Lista os itens mais recentes adicionados ao Jellyfin
-  - Exibe os 5 itens mais recentes com detalhes formatados
-  - Mostra capa, título, ano, classificação e resumo
+- `/recentes`: Lista os itens mais recentes adicionados ao Jellyfin
+  - Exibe até 10 itens recentes com detalhes formatados
+  - Mostra título, ano, gêneros e sinopse
+  - Inclui botões para assistir ou ver mais detalhes
+  - Suporta navegação entre páginas (se houver muitos itens)
+
+- `/recent`: (Legado) Lista os 5 itens mais recentes adicionados ao Jellyfin
+  - Exibe capa, título, ano, classificação e resumo
   
 - `/libraries`: Lista todas as bibliotecas disponíveis no servidor Jellyfin
   - Mostra o nome e tipo de cada biblioteca

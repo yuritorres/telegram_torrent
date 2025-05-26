@@ -29,10 +29,11 @@
 
 ## Próximas Versões Alpha (Desenvolvimento Ativo)
 
-### v0.0.1.3-alpha (Próxima)
+### v0.0.1.3-alpha (Atual)
 - [x] ~~Reintegração básica com Jellyfin~~
-- [x] ~~Comandos básicos do Jellyfin (/recent, /libraries, /status)~~
+- [x] ~~Comandos básicos do Jellyfin (/recent, /recentes, /libraries, /status)~~
 - [x] ~~Suporte a botões inline nos itens recentes~~
+- [x] ~~Correção do comando /recentes~~
 - [ ] Busca avançada na biblioteca do Jellyfin
 - [ ] Controle de permissões para comandos do Jellyfin
 - [ ] Notificações de novos conteúdos adicionados

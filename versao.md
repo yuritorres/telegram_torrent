@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.0.1.2.fix3-alpha - 2025-05-25
+
+### Melhorias
+- Corrigido o comando `/recentes` para exibir itens recentes do Jellyfin
+- Melhor tratamento de erros ao buscar itens recentes
+- Adicionada verificação de inicialização do bot Jellyfin
+
+### Corrigido
+- Comando `/recentes` não estava sendo processado corretamente
+- Falha na inicialização do polling do Telegram para comandos do Jellyfin
+
 ## v0.0.1.2.fix2-alpha - 2025-05-25
 
 ### Melhorias
