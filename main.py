@@ -52,6 +52,10 @@ def main():
     try:
         jellyfin_bot = JellyfinTelegramBot()
         logger.info("Bot do Jellyfin inicializado com sucesso.")
+        # Inicia o polling do Telegram para comandos como /recentes
+        if jellyfin_bot:
+            logger.info("Iniciando polling do JellyfinTelegramBot...")
+            jellyfin_bot.run()
     except Exception as e:
         logger.error(f"Erro ao inicializar o bot do Jellyfin: {e}")
         jellyfin_bot = None

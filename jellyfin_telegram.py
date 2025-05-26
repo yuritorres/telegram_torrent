@@ -107,12 +107,21 @@ class JellyfinTelegramBot:
         self.jellyfin_url = os.getenv('JELLYFIN_URL')
         self.jellyfin_username = os.getenv('JELLYFIN_USERNAME')
         self.jellyfin_password = os.getenv('JELLYFIN_PASSWORD')
+        self.jellyfin_api_key = os.getenv('JELLYFIN_API_KEY')
         self.telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
         self.authorized_users = self._parse_authorized_users()
         
         # Cache para evitar spam de notificações
         self.last_check = datetime.now()
         self.known_items = set()
+        
+        # Inicializa o cliente JellyfinLinks se a API key estiver disponível
+        if self.jellyfin_api_key:
+            from jellyfin_module import JellyfinLinks
+            self.jellyfin_links = JellyfinLinks(
+                base_url=self.jellyfin_url,
+                api_key=self.jellyfin_api_key
+            )
         
     def _parse_authorized_users(self):
         """Parse dos usuários autorizados do .env"""
@@ -202,6 +211,88 @@ Use os botões inline para interagir com o conteúdo!
         except Exception as e:
             logger.error(f"Erro no comando recent: {e}")
             await update.message.reply_text(f"❌ Erro ao buscar itens: {str(e)}")
+    
+    async def recentes_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Comando /recentes - Exibe itens adicionados recentemente usando a nova implementação"""
+        if not self.is_authorized(update.effective_user.id):
+            return
+            
+        await update.message.reply_text("🔍 Buscando itens recentemente adicionados...")
+        
+        try:
+            # Importar a nova implementação do Jellyfin
+            from jellyfin_module import JellyfinClient, JellyfinFormatter
+            
+            # Verificar se temos a chave da API e o cliente de links inicializado
+            if not hasattr(self, 'jellyfin_links') or not self.jellyfin_links:
+                await update.message.reply_text("❌ Erro: Chave da API do Jellyfin não configurada.")
+                return
+            
+            # Inicializar o cliente Jellyfin
+            client = JellyfinClient(self.jellyfin_url, api_key=self.jellyfin_api_key)
+            
+            # Obter itens recentes
+            recent_items = client.get_recently_added(limit=10)
+            
+            if not recent_items:
+                await update.message.reply_text("📥 Nenhum item recente encontrado.")
+                return
+            
+            # Enviar mensagem de cabeçalho
+            await update.message.reply_text("🎬 **Itens adicionados recentemente:**", parse_mode='Markdown')
+            
+            # Enviar cada item com formatação
+            for item in recent_items:
+                # Formatar informações do item
+                info = JellyfinFormatter.format_item_info(item)
+                
+                # Obter link web para o item
+                web_link = self.jellyfin_links.get_web_link(item['Id'])
+                
+                # Criar teclado com opções
+                keyboard = [
+                    [
+                        InlineKeyboardButton("👀 Ver detalhes", url=web_link),
+                        InlineKeyboardButton("▶️ Assistir", url=f"{web_link}&play=true")
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                # Enviar mensagem formatada
+                message = f"""
+📺 **{info.get('title', 'Sem título')}**
+▶️ Tipo: {info.get('type', 'Desconhecido')}
+⭐ Avaliação: {info.get('rating', 'N/A')}
+""".strip()
+                
+                # Adicionar ano se disponível
+                if 'year' in info and info['year']:
+                    message += f"\n📅 Ano: {info['year']}"
+                
+                # Adicionar gêneros se disponíveis
+                if 'genres' in info and info['genres']:
+                    message += f"\n🎭 Gêneros: {', '.join(info['genres'][:3])}"
+                
+                # Adicionar sinopse se disponível
+                if 'overview' in info and info['overview']:
+                    overview = info['overview']
+                    if len(overview) > 200:
+                        overview = overview[:200] + "..."
+                    message += f"\n\n{overview}"
+                
+                await update.message.reply_text(
+                    message,
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup,
+                    disable_web_page_preview=True
+                )
+                
+                # Pequena pausa entre os itens para evitar flood
+                await asyncio.sleep(0.5)
+                
+        except Exception as e:
+            logger.error(f"Erro no comando recentes: {e}", exc_info=True)
+            await update.message.reply_text(f"❌ Erro ao buscar itens recentes: {str(e)}")
     
     async def search_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /search"""
@@ -375,6 +466,7 @@ Use os botões inline para interagir com o conteúdo!
         # Handlers de comandos
         application.add_handler(CommandHandler("start", self.start_command))
         application.add_handler(CommandHandler("recent", self.recent_command))
+        application.add_handler(CommandHandler("recentes", self.recentes_command))  # Novo comando /recentes
         application.add_handler(CommandHandler("search", self.search_command))
         application.add_handler(CommandHandler("libraries", self.libraries_command))
         application.add_handler(CommandHandler("status", self.status_command))
