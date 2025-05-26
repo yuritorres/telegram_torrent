@@ -489,9 +489,11 @@ class TelegramBotExample:
             # Download the video using yt-dlp
             video_info = download_info['video_info']
             
-            # Create a temporary file with .mp4 extension
-            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
-                temp_path = temp_file.name
+            # Create a file in the downloads directory
+            safe_title = "".join(c if c.isalnum() else "_" for c in download_info['title'])
+            download_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
+            os.makedirs(download_dir, exist_ok=True)
+            temp_path = os.path.join(download_dir, f"{safe_title[:50]}_{int(time.time())}.mp4")
             
             try:
                 # Build yt-dlp command with more reliable options
@@ -648,12 +650,14 @@ class TelegramBotExample:
                 if video_id in self.active_downloads:
                     del self.active_downloads[video_id]
                 
-                # Remove temporary file if it exists
-                if temp_path and isinstance(temp_path, str) and os.path.exists(temp_path):
+                # Read remove_after_send from environment variables
+                remove_after_send = os.getenv('REMOVE_AFTER_SEND', 'True').lower() in ('true', '1', 't')
+                if remove_after_send and temp_path and os.path.exists(temp_path):
                     try:
                         os.unlink(temp_path)
+                        logger.info(f"Removed downloaded file: {temp_path}")
                     except Exception as e:
-                        logger.warning(f"Error removing temporary file {temp_path}: {e}")
+                        logger.warning(f"Error removing downloaded file {temp_path}: {e}")
         except Exception as e:
             logger.error(f"Unexpected error in download_and_send_video: {e}", exc_info=True)
             await message.edit_text(
