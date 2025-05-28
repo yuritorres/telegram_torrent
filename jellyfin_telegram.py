@@ -464,6 +464,7 @@ Use os botões inline para interagir com o conteúdo!
         application = Application.builder().token(self.telegram_token).build()
         
         # Handlers de comandos
+        application.add_handler(CommandHandler("qespaco", self.qespaco_command))
         application.add_handler(CommandHandler("start", self.start_command))
         application.add_handler(CommandHandler("recent", self.recent_command))
         application.add_handler(CommandHandler("recentes", self.recentes_command))  # Novo comando /recentes
@@ -471,6 +472,7 @@ Use os botões inline para interagir com o conteúdo!
         application.add_handler(CommandHandler("libraries", self.libraries_command))
         application.add_handler(CommandHandler("status", self.status_command))
         
+        # ... (rest of the code remains the same)
         # Handler para callbacks de botões
         application.add_handler(CallbackQueryHandler(self.button_callback))
         
