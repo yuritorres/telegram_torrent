@@ -1,2 +1,5 @@
 aiohttp
 yt-dlp
+requests
+python-dotenv
+python-telegram-bot
