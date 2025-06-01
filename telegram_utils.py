@@ -380,6 +380,10 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     continue
                     
                 elif text == "/qespaco":
+                    if not is_authorized:
+                        send_telegram("Você não tem permissão para executar este comando.", chat_id)
+                        continue
+                    
                     disk_info = get_disk_space_info(sess, qb_url, chat_id)
                     send_telegram(disk_info, chat_id, parse_mode="HTML", use_keyboard=True)
                     continue
