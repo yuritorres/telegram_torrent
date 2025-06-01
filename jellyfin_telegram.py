@@ -14,24 +14,6 @@ logger = logging.getLogger(__name__)
 class JellyfinTelegramBot:
     # ... (restante do código)
 
-    def get_libraries_text(self):
-        try:
-            import asyncio
-            async def fetch():
-                async with JellyfinAPI(self.jellyfin_url, self.jellyfin_username, self.jellyfin_password) as api:
-                    libraries = await api.get_libraries()
-                    if not libraries:
-                        return "❌ Nenhuma biblioteca encontrada."
-                    text = "📚 **Bibliotecas Disponíveis:**\n\n"
-                    for lib in libraries:
-                        name = lib.get('Name', 'N/A')
-                        lib_type = lib.get('CollectionType', 'N/A')
-                        text += f"• {name} ({lib_type})\n"
-                    return text
-            return asyncio.run(fetch())
-        except Exception as e:
-            return f"❌ Erro ao buscar bibliotecas: {str(e)}"
-
     def list_libraries(self, chat_id, send_telegram_func, use_keyboard=False):
         try:
             import asyncio
@@ -464,7 +446,7 @@ Use os botões inline para interagir com o conteúdo!
         application = Application.builder().token(self.telegram_token).build()
         
         # Handlers de comandos
-        application.add_handler(CommandHandler("qespaco", self.qespaco_command))
+        # application.add_handler(CommandHandler("qespaco", self.qespaco_command))  # Removido - comando implementado em telegram_utils.py
         application.add_handler(CommandHandler("start", self.start_command))
         application.add_handler(CommandHandler("recent", self.recent_command))
         application.add_handler(CommandHandler("recentes", self.recentes_command))  # Novo comando /recentes
