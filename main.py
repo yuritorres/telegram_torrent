@@ -7,7 +7,6 @@ import requests
 import logging
 from dotenv import load_dotenv
 from telegram_utils import send_telegram, process_messages, set_bot_commands
-from qbittorrent_api import get_disk_space_info
 from jellyfin_telegram import JellyfinTelegramBot
 
 logging.basicConfig(level=logging.INFO)

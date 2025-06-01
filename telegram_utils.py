@@ -182,7 +182,7 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
     """
     try:
         if sess is None:
-            return " Não conectado ao qBittorrent."
+            return "❌ Não conectado ao qBittorrent."
             
         # Obtém o caminho de salvamento padrão do qBittorrent
         prefs_resp = sess.get(f"{qb_url}/api/v2/app/preferences")
@@ -191,7 +191,7 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
         save_path = prefs_data.get('save_path')
         
         if not save_path:
-            return " Caminho de salvamento do qBittorrent não encontrado."
+            return "❌ Caminho de salvamento do qBittorrent não encontrado."
             
         # Tenta obter informações do disco via API do qBittorrent
         try:
@@ -203,7 +203,7 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
             used = total - free if total is not None and free is not None else None
             
             if total is not None and used is not None and free is not None:
-                return f" Espaço em disco:\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                return f"💾 <b>Espaço em disco:</b>\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
                 
         except Exception as e:
             # Se for erro 404, tenta usar fallback para /sync/maindata
@@ -226,20 +226,20 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
                                 used = total - free if free is not None else None
                                 
                                 if total is not None and used is not None:
-                                    return f" Espaço em disco (local):\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                                    return f"💾 <b>Espaço em disco (local):</b>\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
                             except Exception:
                                 pass
                         
-                        return f" Espaço livre no disco: {format_bytes(free)}"
+                        return f"💾 <b>Espaço livre no disco:</b> {format_bytes(free)}"
                 except Exception as inner_e:
-                    return f" Erro ao obter espaço em disco: {str(inner_e)}"
+                    return f"❌ Erro ao obter espaço em disco: {str(inner_e)}"
             
-            return f" Erro ao obter espaço em disco: {str(e)}"
+            return f"❌ Erro ao obter espaço em disco: {str(e)}"
             
     except Exception as e:
-        return f" Erro ao obter informações de espaço em disco: {str(e)}"
+        return f"❌ Erro ao obter informações de espaço em disco: {str(e)}"
     
-    return " Não foi possível obter as informações de espaço em disco."
+    return "❌ Não foi possível obter as informações de espaço em disco."
 
 def list_torrents(sess, qb_url: str) -> str:
     """
