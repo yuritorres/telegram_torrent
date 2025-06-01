@@ -203,7 +203,7 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
             used = total - free if total is not None and free is not None else None
             
             if total is not None and used is not None and free is not None:
-                return f"💾 <b>Espaço em disco:</b>\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                return f"💾 Espaço em disco:\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
                 
         except Exception as e:
             # Se for erro 404, tenta usar fallback para /sync/maindata
@@ -226,11 +226,11 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
                                 used = total - free if free is not None else None
                                 
                                 if total is not None and used is not None:
-                                    return f"💾 <b>Espaço em disco (local):</b>\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+                                    return f"💾 Espaço em disco (local):\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
                             except Exception:
                                 pass
                         
-                        return f"💾 <b>Espaço livre no disco:</b> {format_bytes(free)}"
+                        return f"💾 Espaço livre no disco: {format_bytes(free)}"
                 except Exception as inner_e:
                     return f"❌ Erro ao obter espaço em disco: {str(inner_e)}"
             
@@ -254,7 +254,7 @@ def list_torrents(sess, qb_url: str) -> str:
     """
     try:
         if sess is None:
-            return " Não conectado ao qBittorrent."
+            return "❌ Não conectado ao qBittorrent."
             
         from qbittorrent_api import fetch_torrents
         torrents = fetch_torrents(sess, qb_url)
@@ -281,23 +281,23 @@ def list_torrents(sess, qb_url: str) -> str:
         msg_parts = []
         
         if ativos:
-            msg_parts.append("<b> Torrents Ativos:</b>\n" + "\n".join(f"• {t}" for t in ativos))
+            msg_parts.append("<b>📦 Torrents Ativos:</b>\n" + "\n".join(f"• {t}" for t in ativos))
         else:
-            msg_parts.append("<b> Torrents Ativos:</b> Nenhum")
+            msg_parts.append("<b>📦 Torrents Ativos:</b> Nenhum")
             
         if pausados:
-            msg_parts.append("\n<b> Torrents Pausados:</b>\n" + "\n".join(f"• {t}" for t in pausados))
+            msg_parts.append("\n<b>⏸️ Torrents Pausados:</b>\n" + "\n".join(f"• {t}" for t in pausados))
             
         if finalizados:
-            msg_parts.append("\n<b> Torrents Finalizados:</b>\n" + "\n".join(f"• {t}" for t in finalizados))
+            msg_parts.append("\n<b>✅ Torrents Finalizados:</b>\n" + "\n".join(f"• {t}" for t in finalizados))
             
         if parados:
-            msg_parts.append("\n<b> Torrents com Erro/Parados:</b>\n" + "\n".join(f"• {t}" for t in parados))
+            msg_parts.append("\n<b>❌ Torrents com Erro/Parados:</b>\n" + "\n".join(f"• {t}" for t in parados))
         
         return "\n".join(msg_parts) if msg_parts else "Nenhum torrent encontrado."
         
     except Exception as e:
-        return f" Erro ao listar torrents: {str(e)}"
+        return f"❌ Erro ao listar torrents: {str(e)}"
 
 def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_url: str, jellyfin_bot=None) -> int:
     """
@@ -380,10 +380,6 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     continue
                     
                 elif text == "/qespaco":
-                    if not is_authorized:
-                        send_telegram("Você não tem permissão para executar este comando.", chat_id)
-                        continue
-                    
                     disk_info = get_disk_space_info(sess, qb_url, chat_id)
                     send_telegram(disk_info, chat_id, parse_mode="HTML", use_keyboard=True)
                     continue
@@ -425,7 +421,6 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 
                 for magnet in magnets:
                     if not is_authorized:
-                        send_telegram("Você não tem permissão para adicionar torrents.", chat_id)
                         send_telegram("❌ Você não tem permissão para adicionar torrents.", chat_id)
                         continue
                         
