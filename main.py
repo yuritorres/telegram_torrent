@@ -7,7 +7,7 @@ import requests
 import logging
 from dotenv import load_dotenv
 from telegram_utils import send_telegram, process_messages, set_bot_commands
-from jellyfin_telegram import JellyfinTelegramBot
+from jellyfin_consolidated import JellyfinManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,23 +48,22 @@ def main():
     
     last_update_id = 0
     
-    # Inicializa o bot do Jellyfin
+    # Inicializa o gerenciador do Jellyfin
     try:
-        jellyfin_bot = JellyfinTelegramBot()
-        logger.info("Bot do Jellyfin inicializado com sucesso.")
-        # Inicia o polling do Telegram para comandos como /recentes
-        if jellyfin_bot:
-            logger.info("Iniciando polling do JellyfinTelegramBot...")
-            jellyfin_bot.run()
+        jellyfin_manager = JellyfinManager()
+        if jellyfin_manager.is_available():
+            logger.info("Jellyfin configurado e disponível.")
+        else:
+            logger.warning("Jellyfin não configurado ou indisponível.")
     except Exception as e:
-        logger.error(f"Erro ao inicializar o bot do Jellyfin: {e}")
-        jellyfin_bot = None
+        logger.error(f"Erro ao inicializar o gerenciador do Jellyfin: {e}")
+        jellyfin_manager = None
     
     def mensagens_thread():
         nonlocal last_update_id, sess
         while True:
             try:
-                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_bot)
+                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager)
                 time.sleep(1)
             except Exception as e:
                 print(f"Erro no processamento de mensagens: {e}")

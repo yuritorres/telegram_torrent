@@ -152,21 +152,7 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
         logger.error(f"Erro inesperado ao enviar mensagem para o Telegram: {e}")
         return False
 
-def format_bytes(size: int) -> str:
-    """
-    Formata um tamanho em bytes para uma string legível.
-    
-    Args:
-        size: Tamanho em bytes
-        
-    Returns:
-        str: String formatada (ex: "1.23 MB")
-    """
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size < 1024.0:
-            return f"{size:.2f} {unit}"
-        size /= 1024.0
-    return f"{size:.2f} PB"
+# Função format_bytes movida para qbittorrent_api.py para evitar duplicação
 
 def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
     """
@@ -184,62 +170,49 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
         if sess is None:
             return "❌ Não conectado ao qBittorrent."
             
-        # Obtém o caminho de salvamento padrão do qBittorrent
-        prefs_resp = sess.get(f"{qb_url}/api/v2/app/preferences")
-        prefs_resp.raise_for_status()
-        prefs_data = prefs_resp.json()
-        save_path = prefs_data.get('save_path')
+        # Importa as funções consolidadas
+        from qbittorrent_api import get_transfer_info, format_bytes
         
-        if not save_path:
-            return "❌ Caminho de salvamento do qBittorrent não encontrado."
+        # Obtém informações de transferência que incluem espaço em disco
+        transfer_info = get_transfer_info(sess, qb_url)
+        if not transfer_info:
+            return "❌ Não foi possível obter informações de transferência."
             
-        # Tenta obter informações do disco via API do qBittorrent
-        try:
-            drive_info_resp = sess.get(f"{qb_url}/api/v2/app/drive_info", params={"path": save_path})
-            drive_info_resp.raise_for_status()
-            drive_info = drive_info_resp.json()
-            total = drive_info.get('total')
-            free = drive_info.get('free')
-            used = total - free if total is not None and free is not None else None
-            
-            if total is not None and used is not None and free is not None:
-                return f"💾 Espaço em disco:\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
+        free_space = transfer_info.get("free_space_on_disk", 0)
+        
+        # Se temos informação de espaço livre, tenta obter o total
+        if free_space > 0:
+            # Tenta obter o caminho de salvamento para calcular espaço total
+            try:
+                prefs_resp = sess.get(f"{qb_url}/api/v2/app/preferences")
+                prefs_resp.raise_for_status()
+                prefs_data = prefs_resp.json()
+                save_path = prefs_data.get('save_path')
                 
-        except Exception as e:
-            # Se for erro 404, tenta usar fallback para /sync/maindata
-            if hasattr(e, 'response') and e.response is not None and e.response.status_code == 404:
-                try:
-                    maindata_resp = sess.get(f"{qb_url}/api/v2/sync/maindata", params={"rid": 0})
-                    maindata_resp.raise_for_status()
-                    maindata = maindata_resp.json()
-                    server_state = maindata.get('server_state', {})
-                    free = server_state.get('free_space_on_disk')
-                    
-                    if free is not None:
-                        # Tenta obter o total do sistema de arquivos local
-                        import os
-                        if save_path and os.path.exists(save_path):
-                            try:
-                                import shutil
-                                disk_usage = shutil.disk_usage(save_path)
-                                total = disk_usage.total
-                                used = total - free if free is not None else None
-                                
-                                if total is not None and used is not None:
-                                    return f"💾 Espaço em disco (local):\nTotal: {format_bytes(total)}\nUsado: {format_bytes(used)}\nLivre: {format_bytes(free)}"
-                            except Exception:
-                                pass
+                if save_path:
+                    import os
+                    import shutil
+                    if os.path.exists(save_path):
+                        disk_usage = shutil.disk_usage(save_path)
+                        total = disk_usage.total
+                        used = total - free_space
                         
-                        return f"💾 Espaço livre no disco: {format_bytes(free)}"
-                except Exception as inner_e:
-                    return f"❌ Erro ao obter espaço em disco: {str(inner_e)}"
-            
-            return f"❌ Erro ao obter espaço em disco: {str(e)}"
+                        return (
+                            f"💾 <b>Espaço em disco:</b>\n"
+                            f"Total: {format_bytes(total)}\n"
+                            f"Usado: {format_bytes(used)}\n"
+                            f"Disponível: {format_bytes(free_space)}"
+                        )
+            except Exception:
+                pass
+                
+            # Fallback: apenas espaço livre
+            return f"💾 <b>Espaço disponível:</b> {format_bytes(free_space)}"
+        
+        return "❌ Informações de espaço em disco não disponíveis."
             
     except Exception as e:
         return f"❌ Erro ao obter informações de espaço em disco: {str(e)}"
-    
-    return "❌ Não foi possível obter as informações de espaço em disco."
 
 def list_torrents(sess, qb_url: str) -> str:
     """
@@ -299,7 +272,7 @@ def list_torrents(sess, qb_url: str) -> str:
     except Exception as e:
         return f"❌ Erro ao listar torrents: {str(e)}"
 
-def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_url: str, jellyfin_bot=None) -> int:
+def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_url: str, jellyfin_manager=None) -> int:
     """
     Processa as mensagens recebidas do Telegram.
     
@@ -308,7 +281,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
         last_update_id: ID da última atualização processada
         add_magnet_func: Função para adicionar um magnet link
         qb_url: URL base da API do qBittorrent
-        jellyfin_bot: Instância do JellyfinTelegramBot (opcional)
+        jellyfin_manager: Instância do JellyfinManager (opcional)
         
     Returns:
         int: ID da última atualização processada
@@ -394,25 +367,28 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     continue
                 
                 # Comandos do Jellyfin
-                elif text == "/recent" and jellyfin_bot:
+                elif text == "/recent" and jellyfin_manager:
                     if not is_authorized:
                         send_telegram("Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
-                    jellyfin_bot.send_recent_items(chat_id, send_telegram, use_keyboard=True)
+                    recent_text = jellyfin_manager.get_recent_items_text()
+                    send_telegram(recent_text, chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
                 
-                elif text == "/libraries" and jellyfin_bot:
+                elif text == "/libraries" and jellyfin_manager:
                     if not is_authorized:
                         send_telegram("Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
-                    jellyfin_bot.list_libraries(chat_id, send_telegram, use_keyboard=True)
+                    libraries_text = jellyfin_manager.get_libraries_text()
+                    send_telegram(libraries_text, chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
                 
-                elif text == "/status" and jellyfin_bot:
+                elif text == "/status" and jellyfin_manager:
                     if not is_authorized:
                         send_telegram("Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
-                    send_telegram(jellyfin_bot.get_status_text(), chat_id, parse_mode="Markdown", use_keyboard=True)
+                    status_text = jellyfin_manager.get_status_text()
+                    send_telegram(status_text, chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
                 
                 # Processa links magnet
