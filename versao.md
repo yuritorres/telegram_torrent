@@ -1,4 +1,13 @@
-# Changelog
+# Changelog - Telegram Torrent Bot
+
+## v0.0.1.3-alpha - 2024-12-30
+
+### docs
+- Atualizado README.md com informações precisas sobre o comando `/recentes`
+- Corrigida duplicação na seção de comandos rápidos
+- Atualizada estrutura modular para refletir o arquivo `jellyfin_consolidated.py`
+- Melhorada documentação dos comandos do Jellyfin com detalhes específicos
+- Diferenciação clara entre `/recent` e `/recentes`
 
 ## v0.0.1.2.fix3-alpha - 2025-05-25
 

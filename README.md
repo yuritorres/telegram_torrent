@@ -9,8 +9,7 @@ O projeto foi modularizado para facilitar a manutenção e a extensão:
 - `qbittorrent_api.py`: funções para autenticação e interação com o qBittorrent.
 - `telegram_utils.py`: utilitários para envio e processamento de mensagens no Telegram.
 - `torrent_monitor.py`: monitoramento de torrents e notificações automáticas de status/conclusão.
-- `jellyfin_api.py`: integração com o Jellyfin para gerenciamento de mídia.
-- `jellyfin_telegram.py`: comandos e notificações do Jellyfin via Telegram.
+- `jellyfin_consolidated.py`: integração consolidada com o Jellyfin para gerenciamento de mídia e comandos via Telegram.
 
 ## Configuração
 
@@ -49,10 +48,10 @@ O bot inclui um teclado personalizado que aparece na parte inferior do chat, for
 
 #### Comandos Rápidos:
 - 📊 **Status do Servidor**: Verifica o status do servidor Jellyfin
-- 🆕 **Itens Recentes**: Exibe os itens adicionados recentemente ao Jellyfin (comando: `/recentes`)
 - 📦 **Listar Torrents**: Mostra a lista de torrents ativos
 - 💾 **Espaço em Disco**: Exibe o espaço em disco disponível
-- 🎬 **Itens Recentes**: Lista os itens adicionados recentemente ao Jellyfin
+- 🎬 **Itens Recentes**: Lista os itens adicionados recentemente ao Jellyfin (comando: `/recent`)
+- 🎭 **Recentes Detalhado**: Exibe informações detalhadas dos itens recentes (comando: `/recentes`)
 - 📚 **Bibliotecas**: Mostra as bibliotecas disponíveis no Jellyfin
 - ❓ **Ajuda**: Exibe a mensagem de ajuda com todos os comandos
 
@@ -81,14 +80,17 @@ O bot inclui um teclado personalizado que aparece na parte inferior do chat, for
 ### Comandos do Jellyfin
 
 #### Gerenciamento de Conteúdo
-- `/recentes`: Lista os itens mais recentes adicionados ao Jellyfin
-  - Exibe até 10 itens recentes com detalhes formatados
-  - Mostra título, ano, gêneros e sinopse
-  - Inclui botões para assistir ou ver mais detalhes
-  - Suporta navegação entre páginas (se houver muitos itens)
+- `/recentes`: Lista os itens recentemente adicionados ao Jellyfin com informações detalhadas
+  - Exibe até 8 itens recentes com informações completas
+  - Mostra título, ano, tipo de mídia, gêneros e avaliação
+  - Inclui sinopse resumida (até 150 caracteres)
+  - Data de adição ao servidor
+  - Link direto para visualização no Jellyfin
+  - Formatação em Markdown para melhor legibilidade
 
-- `/recent`: (Legado) Lista os 5 itens mais recentes adicionados ao Jellyfin
-  - Exibe capa, título, ano, classificação e resumo
+- `/recent`: Lista os itens mais recentes adicionados ao Jellyfin (versão simplificada)
+  - Exibe informações básicas dos itens recentes
+  - Formato mais compacto e rápido
   
 - `/libraries`: Lista todas as bibliotecas disponíveis no servidor Jellyfin
   - Mostra o nome e tipo de cada biblioteca
