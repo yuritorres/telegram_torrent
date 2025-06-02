@@ -6,7 +6,7 @@
 ---
 
 ## Versão Atual
-- **v0.0.1.4-alpha** (15/01/2025)
+- **v0.0.1.4-alpha** (01/06/2025)
   - Implementação completa do comando `/youtube` para download de vídeos
   - Detecção automática de URLs do YouTube em mensagens
   - Download assíncrono com monitoramento de progresso
