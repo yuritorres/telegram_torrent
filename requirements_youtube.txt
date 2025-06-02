@@ -1,0 +1,5 @@
+# Dependências para funcionalidade YouTube
+yt-dlp>=2023.12.30
+pytube>=15.0.0
+requests>=2.31.0
+aiofiles>=23.2.1

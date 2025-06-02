@@ -28,7 +28,8 @@ def set_bot_commands():
         {"command": "recent", "description": "Ver itens recentes do Jellyfin"},
         {"command": "recentes", "description": "Ver itens recentemente adicionados (detalhado)"},
         {"command": "libraries", "description": "Listar bibliotecas do Jellyfin"},
-        {"command": "status", "description": "Status do servidor Jellyfin"}
+        {"command": "status", "description": "Status do servidor Jellyfin"},
+        {"command": "youtube", "description": "Baixar vídeo do YouTube"}
     ]
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setMyCommands"
     try:
@@ -86,7 +87,8 @@ def get_main_keyboard() -> dict:
             [{'text': '📊 Status do Servidor'}],
             [{'text': '📦 Listar Torrents'}, {'text': '💾 Espaço em Disco'}],
             [{'text': '🎬 Itens Recentes'}, {'text': '🎭 Recentes Detalhado'}],
-            [{'text': '📚 Bibliotecas'}, {'text': '❓ Ajuda'}]
+            [{'text': '📚 Bibliotecas'}, {'text': '🎥 YouTube'}],
+            [{'text': '❓ Ajuda'}]
         ],
         'resize_keyboard': True,
         'one_time_keyboard': False
@@ -381,6 +383,177 @@ def list_torrents(sess, qb_url: str) -> str:
     except Exception as e:
         return f"❌ Erro ao listar torrents: {str(e)}"
 
+async def process_youtube_download(url: str, chat_id: str):
+    """
+    Processa o download de um vídeo do YouTube.
+    
+    Args:
+        url: URL do vídeo do YouTube
+        chat_id: ID do chat do Telegram
+    """
+    from youtube_downloader import YouTubeDownloader, format_duration, format_filesize
+    import asyncio
+    import os
+    
+    downloader = YouTubeDownloader(download_dir="downloads")
+    
+    try:
+        # Envia mensagem inicial
+        send_telegram("🔍 Obtendo informações do vídeo...", chat_id, use_keyboard=True)
+        
+        # Obtém informações do vídeo
+        video_info = downloader.get_video_info(url)
+        if not video_info:
+            send_telegram("❌ Não foi possível obter informações do vídeo. Verifique se o link está correto.", chat_id, use_keyboard=True)
+            return
+        
+        # Formata informações do vídeo
+        title = video_info.get('title', 'Título não disponível')
+        author = video_info.get('uploader', 'Canal desconhecido')
+        duration = video_info.get('duration', 0)
+        views = video_info.get('view_count', 0)
+        upload_date = video_info.get('upload_date', 'Data desconhecida')
+        
+        # Formata a data
+        if upload_date and upload_date != 'Data desconhecida':
+            try:
+                from datetime import datetime
+                date_obj = datetime.strptime(upload_date, '%Y%m%d')
+                upload_date = date_obj.strftime('%d/%m/%Y')
+            except:
+                pass
+        
+        video_info_text = f"""
+📺 *{title}*
+
+👤 *Canal:* {author}
+⏱ *Duração:* {format_duration(duration)}
+📊 *Visualizações:* {views:,}
+📅 *Publicado:* {upload_date}
+
+📥 *Iniciando download...*"""
+        
+        send_telegram(video_info_text, chat_id, parse_mode="Markdown", use_keyboard=True)
+        
+        # Inicia o download
+        def on_complete(download_id, file_path):
+            try:
+                # Verifica o tamanho do arquivo
+                file_size = os.path.getsize(file_path)
+                if file_size > 50 * 1024 * 1024:  # 50MB
+                    send_telegram(f"❌ O vídeo é muito grande para ser enviado pelo Telegram ({format_filesize(file_size)}). Limite: 50MB", chat_id, use_keyboard=True)
+                    # Remove o arquivo
+                    try:
+                        os.remove(file_path)
+                    except:
+                        pass
+                    return
+                
+                # Envia o vídeo
+                send_video_to_telegram(file_path, chat_id, title)
+                
+                # Remove o arquivo após enviar (opcional)
+                remove_after_send = os.getenv('REMOVE_AFTER_SEND', 'True').lower() in ('true', '1', 't')
+                if remove_after_send:
+                    try:
+                        os.remove(file_path)
+                        logger.info(f"Arquivo removido após envio: {file_path}")
+                    except Exception as e:
+                        logger.warning(f"Erro ao remover arquivo {file_path}: {e}")
+                        
+            except Exception as e:
+                logger.error(f"Erro ao processar arquivo baixado: {e}")
+                send_telegram(f"❌ Erro ao processar o arquivo baixado: {str(e)}", chat_id, use_keyboard=True)
+        
+        def on_error(download_id, error_msg):
+            send_telegram(f"❌ Erro no download: {error_msg}", chat_id, use_keyboard=True)
+        
+        # Executa o download de forma assíncrona
+        download_id = downloader.download_video_async(
+            url=url,
+            output_path="downloads",
+            on_complete=on_complete,
+            on_error=on_error,
+            max_filesize="50M"
+        )
+        
+        # Aguarda um pouco para permitir que o download inicie
+        await asyncio.sleep(2)
+        
+        # Monitora o progresso
+        last_progress_update = 0
+        max_wait_time = 600  # 10 minutos
+        start_time = time.time()
+        
+        while True:
+            status = downloader.get_download_status(download_id)
+            if not status:
+                break
+                
+            current_time = time.time()
+            if current_time - start_time > max_wait_time:
+                send_telegram("⏰ Download cancelado por timeout (10 minutos)", chat_id, use_keyboard=True)
+                downloader.cancel_download(download_id)
+                break
+            
+            if status['status'].value in ['completed', 'failed', 'cancelled']:
+                break
+                
+            # Atualiza progresso a cada 10 segundos
+            if current_time - last_progress_update >= 10:
+                elapsed = int(current_time - status['start_time'])
+                progress_text = f"📥 *Baixando...* ⏱ {elapsed}s"
+                send_telegram(progress_text, chat_id, parse_mode="Markdown", use_keyboard=True)
+                last_progress_update = current_time
+            
+            await asyncio.sleep(2)
+            
+    except Exception as e:
+        logger.error(f"Erro no processo de download do YouTube: {e}")
+        send_telegram(f"❌ Erro inesperado: {str(e)}", chat_id, use_keyboard=True)
+
+
+def send_video_to_telegram(file_path: str, chat_id: str, title: str):
+    """
+    Envia um arquivo de vídeo para o Telegram.
+    
+    Args:
+        file_path: Caminho para o arquivo de vídeo
+        chat_id: ID do chat do Telegram
+        title: Título do vídeo
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        logger.error("Token do bot do Telegram não configurado")
+        return False
+    
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendVideo"
+    
+    try:
+        with open(file_path, 'rb') as video_file:
+            files = {'video': video_file}
+            data = {
+                'chat_id': chat_id,
+                'caption': f"✅ *Download concluído!*\n📌 {title}",
+                'parse_mode': 'Markdown',
+                'supports_streaming': True
+            }
+            
+            # Adiciona o teclado personalizado
+            keyboard = get_main_keyboard()
+            data['reply_markup'] = json.dumps(keyboard)
+            
+            resp = requests.post(url, files=files, data=data, timeout=120)
+            resp.raise_for_status()
+            
+            logger.info(f"Vídeo enviado com sucesso: {title}")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Erro ao enviar vídeo para o Telegram: {e}")
+        send_telegram(f"❌ Erro ao enviar o vídeo: {str(e)}", chat_id, use_keyboard=True)
+        return False
+
+
 def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_url: str, jellyfin_manager=None) -> int:
     """
     Processa as mensagens recebidas do Telegram.
@@ -440,6 +613,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     "🎬 Itens Recentes": "/recent",
                     "🎭 Recentes Detalhado": "/recentes",
                     "📚 Bibliotecas": "/libraries",
+                    "🎥 YouTube": "/youtube",
                     "❓ Ajuda": "/start"
                 }
                 
@@ -458,6 +632,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     - /recentes - Ver itens recentemente adicionados (detalhado)
                     - /libraries - Listar bibliotecas do Jellyfin
                     - /status - Status do servidor Jellyfin
+                    - /youtube - Baixar vídeo do YouTube
                     
                     Ou use os botões abaixo para navegar facilmente!"""
                     send_telegram(WELCOME_MESSAGE, chat_id, parse_mode="Markdown", use_keyboard=True)
@@ -509,6 +684,48 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                         continue
                     status_text = jellyfin_manager.get_status_text()
                     send_telegram(status_text, chat_id, parse_mode="Markdown", use_keyboard=True)
+                    continue
+                
+                elif text == "/youtube":
+                    if not is_authorized:
+                        send_telegram("Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    youtube_help = """
+🎥 *Download de Vídeos do YouTube*
+
+*Como usar:*
+• Envie um link do YouTube após este comando
+• Exemplo: `/youtube https://www.youtube.com/watch?v=dQw4w9WgXcQ`
+• Ou simplesmente envie o link do YouTube diretamente
+
+*Formatos suportados:*
+• youtube.com/watch?v=...
+• youtu.be/...
+• youtube.com/shorts/...
+
+*Limitações:*
+• Tamanho máximo: 50MB
+• Apenas vídeos públicos
+• Sem playlists (apenas vídeos individuais)
+
+📝 *Dica:* Você pode enviar o link diretamente sem usar o comando!"""
+                    send_telegram(youtube_help, chat_id, parse_mode="Markdown", use_keyboard=True)
+                    continue
+                
+                # Processa URLs do YouTube
+                from youtube_downloader import is_youtube_url, YouTubeDownloader
+                if is_youtube_url(text):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para baixar vídeos do YouTube.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    try:
+                        # Processa o download do YouTube
+                        import asyncio
+                        asyncio.create_task(process_youtube_download(text, chat_id))
+                    except Exception as e:
+                        logger.error(f"Erro ao processar download do YouTube: {e}")
+                        send_telegram(f"❌ Erro ao processar o vídeo do YouTube: {str(e)}", chat_id, use_keyboard=True)
                     continue
                 
                 # Processa links magnet
