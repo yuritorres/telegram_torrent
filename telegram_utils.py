@@ -26,6 +26,7 @@ def set_bot_commands():
         {"command": "qespaco", "description": "Mostrar espaço em disco"},
         {"command": "qtorrents", "description": "Listar torrents"},
         {"command": "recent", "description": "Ver itens recentes do Jellyfin"},
+        {"command": "recentes", "description": "Ver itens recentemente adicionados (detalhado)"},
         {"command": "libraries", "description": "Listar bibliotecas do Jellyfin"},
         {"command": "status", "description": "Status do servidor Jellyfin"}
     ]
@@ -84,8 +85,8 @@ def get_main_keyboard() -> dict:
         'keyboard': [
             [{'text': '📊 Status do Servidor'}],
             [{'text': '📦 Listar Torrents'}, {'text': '💾 Espaço em Disco'}],
-            [{'text': '🎬 Itens Recentes'}, {'text': '📚 Bibliotecas'}],
-            [{'text': '❓ Ajuda'}]
+            [{'text': '🎬 Itens Recentes'}, {'text': '🎭 Recentes Detalhado'}],
+            [{'text': '📚 Bibliotecas'}, {'text': '❓ Ajuda'}]
         ],
         'resize_keyboard': True,
         'one_time_keyboard': False
@@ -169,6 +170,85 @@ def format_bytes(size: int) -> str:
             return f"{size:.2f} {unit}"
         size /= 1024.0
     return f"{size:.2f} PB"
+
+def get_recent_items_detailed(jellyfin_manager, limit: int = 10) -> str:
+    """
+    Obtém itens recentemente adicionados com informações detalhadas.
+    
+    Args:
+        jellyfin_manager: Instância do JellyfinManager
+        limit: Número máximo de itens a retornar
+        
+    Returns:
+        str: Mensagem formatada com informações detalhadas dos itens recentes
+    """
+    if not jellyfin_manager or not jellyfin_manager.is_available():
+        return "❌ Jellyfin não configurado ou indisponível."
+    
+    try:
+        items = jellyfin_manager.client.get_recently_added(limit)
+        if not items:
+            return "📥 Nenhum item recente encontrado."
+        
+        messages = []
+        messages.append("🎬 **Itens recentemente adicionados (detalhado):**\n")
+        
+        for i, item in enumerate(items, 1):
+            # Informações básicas
+            name = item.get('Name', 'Sem título')
+            item_type = item.get('Type', 'Desconhecido')
+            year = item.get('ProductionYear', '')
+            
+            # Gêneros
+            genres = item.get('Genres', [])
+            genres_text = ', '.join(genres[:3]) if genres else 'N/A'
+            
+            # Avaliação
+            rating = item.get('CommunityRating')
+            rating_text = f"⭐ {rating:.1f}" if rating else "⭐ N/A"
+            
+            # Data de criação
+            date_created = item.get('DateCreated', '')
+            if date_created:
+                try:
+                    from datetime import datetime
+                    date_obj = datetime.fromisoformat(date_created.replace('Z', '+00:00'))
+                    date_text = date_obj.strftime('%d/%m/%Y')
+                except:
+                    date_text = 'N/A'
+            else:
+                date_text = 'N/A'
+            
+            # Sinopse
+            overview = item.get('Overview', '')
+            if overview and len(overview) > 150:
+                overview = overview[:150] + "..."
+            
+            # Link web
+            web_link = jellyfin_manager.client.get_web_link(item['Id'])
+            
+            # Monta a mensagem do item
+            item_msg = f"**{i}. {name}**"
+            if year:
+                item_msg += f" ({year})"
+            item_msg += f"\n📺 Tipo: {item_type}"
+            item_msg += f"\n{rating_text}"
+            item_msg += f"\n🎭 Gêneros: {genres_text}"
+            item_msg += f"\n📅 Adicionado: {date_text}"
+            
+            if overview:
+                item_msg += f"\n\n_{overview}_"
+            
+            item_msg += f"\n🔗 [Ver no Jellyfin]({web_link})"
+            
+            messages.append(item_msg)
+        
+        return "\n\n".join(messages)
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter itens recentes detalhados: {e}")
+        return f"❌ Erro ao buscar itens recentes: {str(e)}"
+
 
 def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
     """
@@ -358,6 +438,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     "📦 Listar Torrents": "/qtorrents",
                     "💾 Espaço em Disco": "/qespaco",
                     "🎬 Itens Recentes": "/recent",
+                    "🎭 Recentes Detalhado": "/recentes",
                     "📚 Bibliotecas": "/libraries",
                     "❓ Ajuda": "/start"
                 }
@@ -374,6 +455,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     - /qespaco - Mostrar espaço em disco
                     - /qtorrents - Listar torrents ativos
                     - /recent - Ver itens recentes do Jellyfin
+                    - /recentes - Ver itens recentemente adicionados (detalhado)
                     - /libraries - Listar bibliotecas do Jellyfin
                     - /status - Status do servidor Jellyfin
                     
@@ -402,6 +484,15 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                         continue
                     recent_text = jellyfin_manager.get_recent_items_text()
                     send_telegram(recent_text, chat_id, parse_mode="Markdown", use_keyboard=True)
+                    continue
+                
+                elif text == "/recentes" and jellyfin_manager:
+                    if not is_authorized:
+                        send_telegram("Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    send_telegram("🔍 Buscando itens recentemente adicionados...", chat_id, use_keyboard=True)
+                    recent_detailed = get_recent_items_detailed(jellyfin_manager, 8)
+                    send_telegram(recent_detailed, chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
                 
                 elif text == "/libraries" and jellyfin_manager:
