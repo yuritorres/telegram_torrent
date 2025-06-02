@@ -6,6 +6,14 @@
 ---
 
 ## Versão Atual
+- **v0.0.1.4-alpha** (15/01/2025)
+  - Implementação completa do comando `/youtube` para download de vídeos
+  - Detecção automática de URLs do YouTube em mensagens
+  - Download assíncrono com monitoramento de progresso
+  - Envio automático de vídeos para o Telegram
+  - Sistema de timeout e limite de tamanho (50MB)
+  - Documentação completa da funcionalidade YouTube
+
 - **v0.0.1.2.fix2-alpha** (25/05/2025)
   - Refatoração completa do processamento de mensagens
   - Centralização do mapeamento de comandos do teclado
@@ -29,16 +37,20 @@
 
 ## Próximas Versões Alpha (Desenvolvimento Ativo)
 
-### v0.0.1.3-alpha (Atual)
+### v0.0.1.4-alpha (Atual)
 - [x] ~~Reintegração básica com Jellyfin~~
 - [x] ~~Comandos básicos do Jellyfin (/recent, /recentes, /libraries, /status)~~
 - [x] ~~Suporte a botões inline nos itens recentes~~
 - [x] ~~Correção do comando /recentes~~
+- [x] ~~Implementação do comando `/youtube` para download de vídeos~~
+- [x] ~~Detecção automática de URLs do YouTube~~
+- [x] ~~Sistema de download assíncrono com progresso~~
+- [x] ~~Documentação completa da funcionalidade YouTube~~
 - [ ] Busca avançada na biblioteca do Jellyfin
 - [ ] Controle de permissões para comandos do Jellyfin
 - [ ] Notificações de novos conteúdos adicionados
 
-### v0.0.1.4-alpha (Em breve)
+### v0.0.1.5-alpha (Em breve)
 - [ ] Sincronização de status entre qBittorrent e Jellyfin
 - [ ] Busca integrada nos conteúdos do Jellyfin
 - [ ] Suporte a múltiplos servidores Jellyfin
@@ -68,16 +80,22 @@
 - [ ] Notificações de novos conteúdos adicionados
 - [ ] Gerenciamento de bibliotecas do Jellyfin
 
-### v0.3.0 - Suporte a YouTube (Previsto: Nov/2025)
-**Objetivo**: Download e gerenciamento de vídeos
+### v0.3.0 - Suporte Avançado a YouTube (Previsto: Nov/2025)
+**Objetivo**: Expansão das funcionalidades de download de vídeos
 
-#### Novas Funcionalidades:
-- [ ] Download de vídeos do YouTube via link
+#### Funcionalidades Básicas (Já Implementadas em v0.0.1.4-alpha):
+- [x] ~~Download de vídeos do YouTube via link~~
+- [x] ~~Detecção automática de URLs do YouTube~~
+- [x] ~~Envio direto para o Telegram após download~~
+- [x] ~~Sistema de progresso e timeout~~
+
+#### Novas Funcionalidades Avançadas:
 - [ ] Escolha de qualidade/formato do vídeo
 - [ ] Extração apenas de áudio (formato MP3)
 - [ ] Envio direto para o Jellyfin após download
 - [ ] Fila de downloads do YouTube
 - [ ] Histórico de downloads
+- [ ] Suporte a playlists do YouTube
 
 ### v0.4.0 - Recursos Avançados (Previsto: Dez/2025)
 **Objetivo**: Automação e recursos avançados
@@ -179,4 +197,4 @@
 3. Envie seus PRs para a branch `develop`
 
 ---
-*Atualizado em: 24/05/2025*
+*Atualizado em: 01/06/2025*

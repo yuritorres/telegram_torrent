@@ -1,5 +1,29 @@
 # Changelog - Telegram Torrent Bot
 
+## v0.0.1.4-alpha - 2025-01-15
+
+### feat
+- Implementado comando `/youtube` para download de vídeos do YouTube
+- Adicionado botão "🎥 YouTube" no teclado personalizado
+- Detecção automática de URLs do YouTube em mensagens
+- Download assíncrono com monitoramento de progresso
+- Envio automático de vídeos para o Telegram após download
+- Suporte a informações detalhadas do vídeo (título, canal, duração, visualizações)
+- Limite de 50MB para compatibilidade com Telegram
+- Sistema de timeout de 10 minutos por download
+- Remoção automática de arquivos após envio (configurável)
+
+### docs
+- Criado README_YOUTUBE.md com documentação completa
+- Adicionado requirements_youtube.txt com dependências necessárias
+- Atualizada mensagem de boas-vindas com comando `/youtube`
+
+### refactor
+- Criado módulo youtube_downloader.py baseado em up_youtube_downloader.py
+- Integração completa com sistema de comandos existente
+- Adicionadas funções process_youtube_download e send_video_to_telegram
+- Melhorado tratamento de erros para downloads do YouTube
+
 ## v0.0.1.3-alpha - 2024-12-30
 
 ### docs
