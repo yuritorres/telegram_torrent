@@ -9,7 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copie o restante do código da aplicação para o contêiner
-COPY .
+COPY . .
 
 # O arquivo .env não deve ser copiado diretamente para a imagem por questões de segurança.
 # Considere montar o arquivo .env como um volume ou passá-lo como variáveis de ambiente ao executar o contêiner.
