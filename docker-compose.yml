@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  telegram-torrent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram-torrent
+    restart: unless-stopped
+    volumes:
+      # Mount the downloads folder to persist downloaded content
+      - ./downloads:/app/downloads
+      # Mount the .env file as a read-only volume
+      - ./.env:/app/.env:ro
+    networks:
+      - telegram-torrent-network
+    # Healthcheck to verify the service is running properly
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    environment:
+      - TZ=America/Sao_Paulo
+      # You can override environment variables here if needed
+      # - TELEGRAM_BOT_TOKEN=your_token_here
+    # Optional: If your app provides an API or web interface, expose the port
+    # ports:
+    #  - "8080:8080"
+    
+  # Optional: Add qBittorrent service if needed for your torrent downloads
+  # qbittorrent:
+  #   image: linuxserver/qbittorrent:latest
+  #   container_name: qbittorrent
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=America/Sao_Paulo
+  #     - WEBUI_PORT=8082
+  #   volumes:
+  #     - ./qbittorrent/config:/config
+  #     - ./downloads:/downloads
+  #   ports:
+  #     - "8082:8082"
+  #     - "6881:6881"
+  #     - "6881:6881/udp"
+  #   restart: unless-stopped
+  #   networks:
+  #     - telegram-torrent-network
+
+networks:
+  telegram-torrent-network:
+    driver: bridge
