@@ -13,6 +13,8 @@ O projeto foi modularizado para facilitar a manutenção e a extensão:
 
 ## Configuração
 
+### Instalação Direta
+
 1. Clone este repositório.
 2. Instale as dependências:
    ```bash
@@ -29,6 +31,126 @@ O projeto foi modularizado para facilitar a manutenção e a extensão:
    AUTHORIZED_USERS=123456789,987654321 # (Opcional) IDs dos usuários autorizados a executar comandos críticos, separados por vírgula. Se não definido, qualquer usuário pode executar comandos.
    ```
 4. Obtenha seu `TG_CHAT_ID` enviando uma mensagem para o seu bot e acessando `https://api.telegram.org/botSEU_TOKEN/getUpdates`.
+
+### Instalação com Docker
+
+O projeto também pode ser executado em contêineres Docker, facilitando a implantação e isolando as dependências.
+
+#### Criando o Dockerfile
+
+Crie um arquivo `Dockerfile` na raiz do projeto com o seguinte conteúdo:
+
+```dockerfile
+# Use uma imagem base oficial do Python
+FROM python:3.9-slim
+
+# Defina o diretório de trabalho dentro do contêiner
+WORKDIR /app
+
+# Copie o arquivo de requisitos e instale as dependências
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copie o restante do código da aplicação para o contêiner
+COPY . .
+
+# O arquivo .env não deve ser copiado diretamente para a imagem por questões de segurança.
+# Considere montar o arquivo .env como um volume ou passá-lo como variáveis de ambiente ao executar o contêiner.
+
+# Comando para executar o script principal quando o contêiner iniciar
+CMD ["python", "main.py"]
+```
+
+---
+
+## Instalação e Execução sem Docker (Ambiente Virtual Python)
+
+Se você está em um sistema Linux (Armbian, Debian, Ubuntu, Orange Pi, Raspberry Pi, etc) e não quer ou não pode usar Docker, siga estes passos para rodar o bot em um ambiente isolado:
+
+### 1. Instale Python 3, venv e pip (se necessário)
+```bash
+sudo apt update
+sudo apt install python3 python3-venv python3-pip -y
+```
+
+### 2. Crie um ambiente virtual na pasta do projeto
+```bash
+cd /caminho/para/telegram_torrent
+python3 -m venv venv
+```
+
+### 3. Ative o ambiente virtual
+```bash
+source venv/bin/activate
+```
+
+### 4. Instale as dependências do projeto
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -r requirements_youtube.txt
+```
+
+### 5. Configure o arquivo `.env`
+Crie ou edite o arquivo `.env` com seus dados do Telegram e qBittorrent.
+
+### 6. Execute o bot
+```bash
+python main.py
+```
+
+### 7. (Opcional) Execute em background
+```bash
+nohup python main.py &
+```
+
+### Observações
+- Sempre que quiser rodar o bot, ative o ambiente virtual:
+  ```bash
+  cd /caminho/para/telegram_torrent
+  source venv/bin/activate
+  python main.py
+  ```
+- Para sair do ambiente virtual, use `deactivate`.
+- O ambiente virtual mantém as dependências isoladas do sistema.
+
+---
+
+#### Criando o docker-compose.yml
+
+Copie o arquivo `docker-compose.yml` na raiz do projeto:
+
+```
+
+#### Utilizando Docker
+
+Depois de criar os arquivos, execute os seguintes comandos para construir e iniciar os contêineres:
+
+1. Construir e iniciar os contêineres em segundo plano:
+   ```bash
+   docker compose up -d
+   ```
+
+2. Verificar os logs da aplicação:
+   ```bash
+   docker compose logs -f telegram-torrent
+   ```
+
+3. Parar os contêineres:
+   ```bash
+   docker compose down
+   ```
+
+4. Para reconstruir a imagem após alterações no código:
+   ```bash
+   docker compose build telegram-torrent
+   ou
+   docker compose build --no-cache telegram-torrent
+   docker compose up -d
+   
+   ```
+
+> **Nota**: Certifique-se de que o arquivo `.env` esteja configurado corretamente antes de iniciar os contêineres.
 
 ## Uso
 
