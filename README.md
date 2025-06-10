@@ -270,6 +270,9 @@ Este projeto segue o Versionamento Semântico (SemVer) e utiliza commits padroni
 
 Consulte o arquivo `versao.md` para o histórico de mudanças.
 
+## Links
+https://www.digitalocean.com/community/tutorials/nohup-command-in-linux
+
 ## Disclaimer
 
 Este projeto é desenvolvido apenas para fins educacionais e de uso pessoal. Não incentivamos ou apoiamos qualquer forma de pirataria ou uso ilegal. Os usuários são responsáveis por garantir que suas ações estejam em conformidade com todas as leis de direitos autorais e propriedade intelectual aplicáveis.
