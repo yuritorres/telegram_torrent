@@ -104,6 +104,14 @@ python main.py
 nohup python main.py &
 ```
 
+Caso desejar verificar o log de todos os nohup utilizados (em execução e finalizados), utilize o comando:
+
+ps aux | grep "nome_do_arquivo.py"
+
+Se você quiser parar ou matar o processo em execução, use o killcomando seguido do ID do processo:
+
+kill 2565
+
 ### Observações
 - Sempre que quiser rodar o bot, ative o ambiente virtual:
   ```bash
