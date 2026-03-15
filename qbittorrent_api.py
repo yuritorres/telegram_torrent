@@ -19,10 +19,31 @@ def login_qb(qb_url, qb_user, qb_pass):
     except Exception as e:
         logger.error(f"Erro ao autenticar no qBittorrent: {e}")
         raise
-def fetch_torrents(sess, qb_url):
-    resp = sess.get(f"{qb_url}/api/v2/torrents/info")
-    resp.raise_for_status()
-    return resp.json()
+import time
+from requests.exceptions import HTTPError
+
+def fetch_torrents(sess, qb_url, retries: int = 3, wait_seconds: int = 30):
+    """Obtém a lista de torrents do qBittorrent.
+
+    Se ocorrer erro 403 (Forbidden), aguarda *wait_seconds* e tenta novamente
+    até *retries* vezes.
+    """
+    attempt = 0
+    while True:
+        try:
+            resp = sess.get(f"{qb_url}/api/v2/torrents/info")
+            resp.raise_for_status()
+            return resp.json()
+        except HTTPError as e:
+            status = getattr(e.response, "status_code", None)
+            if status == 403 and attempt < retries:
+                attempt += 1
+                logger.warning(
+                    f"❗️ Erro 403 ao acessar /torrents/info. Tentativa {attempt}/{retries} em {wait_seconds}s."
+                )
+                time.sleep(wait_seconds)
+                continue
+            raise
 
 def resumo_torrents(torrents):
     lines = []
