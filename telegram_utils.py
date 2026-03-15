@@ -348,10 +348,17 @@ def list_torrents(sess, qb_url: str) -> str:
         finalizados = []
         parados = []
         
+        # Limite de caracteres para nomes de torrents
+        MAX_NAME_LENGTH = 80
+        
         for t in torrents:
             estado = t.get('state', '')
             nome = t.get('name', 'Sem nome')
             progresso = t.get('progress', 0) * 100
+            
+            # Truncar nome se for muito longo
+            if len(nome) > MAX_NAME_LENGTH:
+                nome = nome[:MAX_NAME_LENGTH] + "..."
             
             if estado in ['downloading', 'stalledDL', 'checkingDL', 'queuedDL', 'forcedDL']:
                 ativos.append(f"{nome} ({progresso:.1f}%)")
@@ -362,26 +369,43 @@ def list_torrents(sess, qb_url: str) -> str:
             elif estado in ['stalledDL', 'stalledUP', 'error', 'missingFiles', 'unknown']:
                 parados.append(f"{nome} ({estado})")
         
-        msg_parts = []
+        # Cabeçalho com resumo
+        total = len(torrents)
+        msg_parts = [f"<b>📊 Status dos Torrents</b>"]
+        msg_parts.append(f"<i>Total: {total} torrent(s)</i>")
+        msg_parts.append("─" * 30)
         
+        # Torrents Ativos
         if ativos:
-            msg_parts.append("<b>📦 Torrents Ativos:</b>\n" + "\n".join(f"• {t}" for t in ativos))
+            msg_parts.append(f"\n<b>📦 Torrents Ativos ({len(ativos)}):</b>")
+            for t in ativos:
+                msg_parts.append(f"  • {t}")
         else:
-            msg_parts.append("<b>📦 Torrents Ativos:</b> Nenhum")
-            
+            msg_parts.append(f"\n<b>📦 Torrents Ativos:</b> <i>Nenhum</i>")
+        
+        # Torrents Pausados
         if pausados:
-            msg_parts.append("\n<b>⏸️ Torrents Pausados:</b>\n" + "\n".join(f"• {t}" for t in pausados))
-            
+            msg_parts.append(f"\n<b>⏸️ Torrents Pausados ({len(pausados)}):</b>")
+            for t in pausados:
+                msg_parts.append(f"  • {t}")
+        
+        # Torrents Finalizados
         if finalizados:
-            msg_parts.append("\n<b>✅ Torrents Finalizados:</b>\n" + "\n".join(f"• {t}" for t in finalizados))
-            
+            msg_parts.append(f"\n<b>✅ Torrents Finalizados ({len(finalizados)}):</b>")
+            for t in finalizados:
+                msg_parts.append(f"  • {t}")
+        
+        # Torrents com Erro/Parados
         if parados:
-            msg_parts.append("\n<b>❌ Torrents com Erro/Parados:</b>\n" + "\n".join(f"• {t}" for t in parados))
+            msg_parts.append(f"\n<b>❌ Torrents com Erro/Parados ({len(parados)}):</b>")
+            for t in parados:
+                msg_parts.append(f"  • {t}")
         
         return "\n".join(msg_parts) if msg_parts else "Nenhum torrent encontrado."
         
     except Exception as e:
         return f"❌ Erro ao listar torrents: {str(e)}"
+
 
 async def process_youtube_download(url: str, chat_id: str):
     """
