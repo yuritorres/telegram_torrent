@@ -10,8 +10,6 @@ services:
     volumes:
       # Mount the downloads folder to persist downloaded content
       - ./downloads:/app/downloads
-      # Mount the .env file as a read-only volume
-      - ./.env:/app/.env:ro
     networks:
       - telegram-torrent-network
     # Healthcheck to verify the service is running properly
@@ -21,10 +19,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+    env_file:
+      - .env
     environment:
       - TZ=America/Sao_Paulo
-      # You can override environment variables here if needed
-      # - TELEGRAM_BOT_TOKEN=your_token_here
     # Optional: If your app provides an API or web interface, expose the port
     # ports:
     #  - "8080:8080"
