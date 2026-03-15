@@ -8,6 +8,7 @@ import logging
 from dotenv import load_dotenv
 from telegram_utils import send_telegram, process_messages, set_bot_commands
 from jellyfin_consolidated import JellyfinManager
+from jellyfin_notifier import JellyfinNotifier
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,10 +50,20 @@ def main():
     last_update_id = 0
     
     # Inicializa o gerenciador do Jellyfin
+    jellyfin_notifier = None
     try:
         jellyfin_manager = JellyfinManager()
         if jellyfin_manager.is_available():
             logger.info("Jellyfin configurado e disponível.")
+            
+            # Inicializa o notificador do Jellyfin se habilitado
+            notifications_enabled = os.getenv('JELLYFIN_NOTIFICATIONS_ENABLED', 'True').lower() in ('true', '1', 't')
+            if notifications_enabled:
+                notification_interval = int(os.getenv('JELLYFIN_NOTIFICATION_INTERVAL', 1800))
+                jellyfin_notifier = JellyfinNotifier(jellyfin_manager, interval=notification_interval)
+                logger.info(f"Notificações do Jellyfin habilitadas (intervalo: {notification_interval}s)")
+            else:
+                logger.info("Notificações do Jellyfin desabilitadas")
         else:
             logger.warning("Jellyfin não configurado ou indisponível.")
     except Exception as e:
@@ -76,6 +87,13 @@ def main():
             except Exception as e:
                 print(f"Erro no monitoramento de torrents: {e}")
     
+    def jellyfin_notifier_thread():
+        if jellyfin_notifier is not None:
+            try:
+                jellyfin_notifier.start_monitoring()
+            except Exception as e:
+                logger.error(f"Erro no monitoramento do Jellyfin: {e}")
+    
     # Inicia as threads
     threads = []
     
@@ -89,6 +107,13 @@ def main():
         t2 = threading.Thread(target=monitor_thread, daemon=True)
         threads.append(t2)
         t2.start()
+    
+    # Thread de notificações do Jellyfin (apenas se habilitado)
+    if jellyfin_notifier is not None:
+        t3 = threading.Thread(target=jellyfin_notifier_thread, daemon=True)
+        threads.append(t3)
+        t3.start()
+        logger.info("Thread de notificações do Jellyfin iniciada")
     
     # Mantém o programa em execução
     try:

@@ -46,9 +46,9 @@
 - [x] ~~Detecção automática de URLs do YouTube~~
 - [x] ~~Sistema de download assíncrono com progresso~~
 - [x] ~~Documentação completa da funcionalidade YouTube~~
+- [x] ~~Notificações de novos conteúdos adicionados~~
 - [ ] Busca avançada na biblioteca do Jellyfin
 - [ ] Controle de permissões para comandos do Jellyfin
-- [ ] Notificações de novos conteúdos adicionados
 
 ### v0.0.1.5-alpha (Em breve)
 - [ ] Sincronização de status entre qBittorrent e Jellyfin
