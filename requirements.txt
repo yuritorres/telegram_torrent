@@ -5,3 +5,4 @@ python-dotenv
 python-telegram-bot
 aiofiles
 beautifulsoup4
+flask

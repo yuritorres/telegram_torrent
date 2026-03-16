@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from telegram_utils import send_telegram, process_messages, set_bot_commands
 from jellyfin_consolidated import JellyfinManager
 from jellyfin_notifier import JellyfinNotifier
+from waha_utils import init_waha_client, create_webhook_app
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -70,6 +71,49 @@ def main():
         logger.error(f"Erro ao inicializar o gerenciador do Jellyfin: {e}")
         jellyfin_manager = None
     
+    # Inicializa o cliente WhatsApp WAHA
+    waha_enabled = os.getenv('WAHA_URL') and os.getenv('WAHA_API_KEY')
+    flask_app = None
+    if waha_enabled:
+        try:
+            logger.info("Inicializando cliente WhatsApp WAHA...")
+            
+            # Aguarda alguns segundos para o WAHA estar pronto
+            logger.info("Aguardando WAHA inicializar...")
+            time.sleep(10)
+            
+            waha_client = init_waha_client()
+            if waha_client:
+                logger.info("Cliente WhatsApp WAHA inicializado com sucesso")
+            else:
+                logger.warning("Cliente WAHA não respondeu, mas o servidor Flask será iniciado")
+            
+            # Cria aplicação Flask para webhooks (independente do status do WAHA)
+            flask_app = create_webhook_app(
+                sess=sess,
+                add_magnet_func=add_magnet if QBITTORRENT_AVAILABLE else None,
+                qb_url=QB_URL,
+                jellyfin_manager=jellyfin_manager
+            )
+            logger.info("Servidor Flask para webhooks WhatsApp configurado")
+            
+        except Exception as e:
+            logger.error(f"Erro ao inicializar WhatsApp WAHA: {e}")
+            # Mesmo com erro, tenta criar o Flask app
+            try:
+                flask_app = create_webhook_app(
+                    sess=sess,
+                    add_magnet_func=add_magnet if QBITTORRENT_AVAILABLE else None,
+                    qb_url=QB_URL,
+                    jellyfin_manager=jellyfin_manager
+                )
+                logger.info("Servidor Flask criado apesar do erro na inicialização do WAHA")
+            except Exception as flask_error:
+                logger.error(f"Erro ao criar Flask app: {flask_error}")
+                waha_enabled = False
+    else:
+        logger.info("WhatsApp WAHA não configurado (WAHA_URL ou WAHA_API_KEY ausentes)")
+    
     def mensagens_thread():
         nonlocal last_update_id, sess
         while True:
@@ -94,10 +138,18 @@ def main():
             except Exception as e:
                 logger.error(f"Erro no monitoramento do Jellyfin: {e}")
     
+    def flask_webhook_thread():
+        if flask_app is not None:
+            try:
+                logger.info("Iniciando servidor Flask para webhooks WhatsApp na porta 5000")
+                flask_app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+            except Exception as e:
+                logger.error(f"Erro no servidor Flask: {e}")
+    
     # Inicia as threads
     threads = []
     
-    # Thread de processamento de mensagens
+    # Thread de processamento de mensagens Telegram
     t1 = threading.Thread(target=mensagens_thread, daemon=True)
     threads.append(t1)
     t1.start()
@@ -114,6 +166,13 @@ def main():
         threads.append(t3)
         t3.start()
         logger.info("Thread de notificações do Jellyfin iniciada")
+    
+    # Thread do servidor Flask para webhooks WhatsApp (apenas se WAHA estiver configurado)
+    if flask_app is not None:
+        t4 = threading.Thread(target=flask_webhook_thread, daemon=True)
+        threads.append(t4)
+        t4.start()
+        logger.info("Thread do servidor Flask para WhatsApp iniciada")
     
     # Mantém o programa em execução
     try:
