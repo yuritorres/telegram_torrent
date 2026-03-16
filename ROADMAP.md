@@ -6,6 +6,18 @@
 ---
 
 ## Versão Atual
+- **v0.0.1.5-alpha** (16/03/2026)
+  - **Integração WhatsApp WAHA completa**
+    - Cliente API WAHA para comunicação com WhatsApp
+    - Servidor Flask para recebimento de webhooks
+    - Processamento de comandos WhatsApp (todos os comandos do Telegram adaptados)
+    - Sistema de autorização por número de telefone
+    - Suporte a mensagens de texto e formatação Markdown
+    - Documentação completa da integração WhatsApp
+  - API YTS Brasil para busca de filmes, séries e animes
+  - Sistema de cache e seleção interativa de torrents
+  - Notificações de novos conteúdos do Jellyfin
+
 - **v0.0.1.4-alpha** (01/06/2025)
   - Implementação completa do comando `/youtube` para download de vídeos
   - Detecção automática de URLs do YouTube em mensagens
@@ -37,7 +49,7 @@
 
 ## Próximas Versões Alpha (Desenvolvimento Ativo)
 
-### v0.0.1.4-alpha (Atual)
+### v0.0.1.5-alpha (Atual)
 - [x] ~~Reintegração básica com Jellyfin~~
 - [x] ~~Comandos básicos do Jellyfin (/recent, /recentes, /libraries, /status)~~
 - [x] ~~Suporte a botões inline nos itens recentes~~
@@ -47,10 +59,17 @@
 - [x] ~~Sistema de download assíncrono com progresso~~
 - [x] ~~Documentação completa da funcionalidade YouTube~~
 - [x] ~~Notificações de novos conteúdos adicionados~~
+- [x] ~~**Integração WhatsApp WAHA completa**~~
+  - [x] ~~Cliente API WAHA (waha_api.py)~~
+  - [x] ~~Servidor Flask para webhooks (waha_utils.py)~~
+  - [x] ~~Processamento de comandos WhatsApp (whatsapp_commands.py)~~
+  - [x] ~~Sistema de autorização por número~~
+  - [x] ~~Todos os comandos do Telegram adaptados para WhatsApp~~
+  - [x] ~~Documentação completa (README_WHATSAPP.md, QUICKSTART_WHATSAPP.md)~~
 - [ ] Busca avançada na biblioteca do Jellyfin
 - [ ] Controle de permissões para comandos do Jellyfin
 
-### v0.0.1.5-alpha (Previsto: Abr/2026)
+### v0.0.1.6-alpha (Previsto: Abr/2026)
 **Objetivo**: Busca e permissões avançadas
 
 #### Funcionalidades:
@@ -437,24 +456,28 @@
   - [ ] Configuração unificada
   - [ ] Logs compartilhados
 
-### v1.4.0 - Suporte a WhatsApp (Previsto: Dez/2027)
+### v1.4.0 - Suporte a WhatsApp ✅ (Implementado antecipadamente em v0.0.1.5-alpha)
 **Objetivo**: Expansão para WhatsApp
 
-#### Recursos:
-- [ ] Integração com WhatsApp Business API
-  - [ ] Autenticação via QR Code
-  - [ ] Mensagens de texto e mídia
-  - [ ] Botões de resposta rápida
-  - [ ] Listas interativas
-- [ ] Funcionalidades
-  - [ ] Comandos similares ao Telegram
-  - [ ] Notificações automáticas
-  - [ ] Suporte a grupos
-  - [ ] Status de leitura
-- [ ] Limitações conhecidas
-  - [ ] Restrições da API oficial
-  - [ ] Limites de taxa
-  - [ ] Requisitos de verificação
+#### Recursos Implementados:
+- [x] ~~Integração com WhatsApp via WAHA~~
+  - [x] ~~Autenticação via QR Code~~
+  - [x] ~~Mensagens de texto~~
+  - [x] ~~Servidor Flask para webhooks~~
+  - [x] ~~Cliente API WAHA completo~~
+- [x] ~~Funcionalidades~~
+  - [x] ~~Todos os comandos do Telegram adaptados~~
+  - [x] ~~Sistema de autorização por número~~
+  - [x] ~~Formatação Markdown~~
+  - [x] ~~Processamento de comandos WhatsApp~~
+
+#### Recursos Futuros (Melhorias):
+- [ ] Suporte a mídia (imagens, vídeos, áudio)
+- [ ] Botões de resposta rápida
+- [ ] Listas interativas
+- [ ] Notificações automáticas via WhatsApp
+- [ ] Suporte a grupos do WhatsApp
+- [ ] Status de leitura e confirmação
 
 ### v1.5.0 - Machine Learning (Previsto: Jan/2028)
 **Objetivo**: Recursos inteligentes
@@ -529,4 +552,4 @@
 3. Envie seus PRs para a branch `develop`
 
 ---
-*Atualizado em: 15/03/2026*
+*Atualizado em: 16/03/2026*
