@@ -638,6 +638,9 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                     "🎭 Recentes Detalhado": "/recentes",
                     "📚 Bibliotecas": "/libraries",
                     "🎥 YouTube": "/youtube",
+                    "🎬 Buscar Filmes": "/ytsbr",
+                    "📺 Buscar Séries": "/ytsbr_series",
+                    "🎌 Buscar Animes": "/ytsbr_anime",
                     "❓ Ajuda": "/start"
                 }
                 
@@ -734,6 +737,164 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
 
 📝 *Dica:* Você pode enviar o link diretamente sem usar o comando!"""
                     send_telegram(youtube_help, chat_id, parse_mode="Markdown", use_keyboard=True)
+                    continue
+                
+                # Comandos do YTS Brasil
+                elif text.startswith("/ytsbr_baixar"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_download_by_number
+                    
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        send_telegram("❌ Use: `/ytsbr_baixar [número]`\nExemplo: `/ytsbr_baixar 1`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    else:
+                        try:
+                            number = int(parts[1])
+                            handle_ytsbr_download_by_number(number, user_id, chat_id, add_magnet_func, sess, qb_url)
+                        except ValueError:
+                            send_telegram("❌ Número inválido. Use apenas números.\n\n*Exemplo:* `/ytsbr_baixar 1`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    continue
+                
+                elif text.startswith("/ytsbr_generos"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_genres
+                    handle_ytsbr_genres("movie", chat_id)
+                    continue
+                
+                elif text.startswith("/ytsbr_genero"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_by_genre
+                    
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        send_telegram("❌ Use: `/ytsbr_genero [nome do gênero]`\nExemplo: `/ytsbr_genero acao`\n\nPara ver gêneros disponíveis: `/ytsbr_generos`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    else:
+                        genre = parts[1]
+                        handle_ytsbr_by_genre(genre, "movie", chat_id, user_id)
+                    continue
+                
+                elif text.startswith("/ytsbr_series_generos"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_genres
+                    handle_ytsbr_genres("series", chat_id, user_id)
+                    continue
+                
+                elif text.startswith("/ytsbr_series_genero"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_by_genre
+                    
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        send_telegram("❌ Use: `/ytsbr_series_genero [nome do gênero]`\nExemplo: `/ytsbr_series_genero drama`\n\nPara ver gêneros disponíveis: `/ytsbr_series_generos`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    else:
+                        genre = parts[1]
+                        handle_ytsbr_by_genre(genre, "series", chat_id, user_id)
+                    continue
+                
+                elif text.startswith("/ytsbr_anime_generos"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_genres
+                    handle_ytsbr_genres("anime", chat_id, user_id)
+                    continue
+                
+                elif text.startswith("/ytsbr_anime_genero"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_by_genre
+                    
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        send_telegram("❌ Use: `/ytsbr_anime_genero [nome do gênero]`\nExemplo: `/ytsbr_anime_genero acao`\n\nPara ver gêneros disponíveis: `/ytsbr_anime_generos`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    else:
+                        genre = parts[1]
+                        handle_ytsbr_by_genre(genre, "anime", chat_id, user_id)
+                    continue
+                
+                elif text.startswith("/ytsbr"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_search, handle_ytsbr_popular
+                    
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        # Mostra filmes populares
+                        handle_ytsbr_popular("movie", chat_id, user_id)
+                    else:
+                        # Busca por filmes
+                        query = parts[1]
+                        handle_ytsbr_search(query, "movie", chat_id, user_id)
+                    continue
+                
+                elif text.startswith("/ytsbr_series"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_search, handle_ytsbr_popular
+                    
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        # Mostra séries populares
+                        handle_ytsbr_popular("series", chat_id, user_id)
+                    else:
+                        # Busca por séries
+                        query = parts[1]
+                        handle_ytsbr_search(query, "series", chat_id, user_id)
+                    continue
+                
+                elif text.startswith("/ytsbr_anime"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_search, handle_ytsbr_popular
+                    
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        # Mostra animes populares
+                        handle_ytsbr_popular("anime", chat_id, user_id)
+                    else:
+                        # Busca por animes
+                        query = parts[1]
+                        handle_ytsbr_search(query, "anime", chat_id, user_id)
+                    continue
+                
+                # Processa URLs do ytsbr.com
+                elif "ytsbr.com/" in text and any(x in text for x in ["/filme/", "/serie/", "/anime/"]):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para baixar torrents.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from ytsbr_commands import handle_ytsbr_details
+                    
+                    # Extrai a URL
+                    import re
+                    url_match = re.search(r'https?://ytsbr\.com/(?:filme|serie|anime)/[^\s]+', text)
+                    if url_match:
+                        url = url_match.group(0)
+                        handle_ytsbr_details(url, chat_id, add_magnet_func, sess, qb_url)
                     continue
                 
                 # Processa URLs do YouTube
