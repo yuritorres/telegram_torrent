@@ -362,42 +362,39 @@ class YTSBRApi:
             response = self.session.get(url, timeout=10)
             response.raise_for_status()
             
+            # Busca por links magnet no HTML completo (incluindo scripts e modais)
+            html_content = response.text
+            
+            # Procura por padrão magnet:?xt=urn:btih: no HTML
+            magnet_pattern = r'magnet:\?xt=urn:btih:[a-fA-F0-9]{40}[^\s\'"<>]*'
+            magnet_matches = re.findall(magnet_pattern, html_content)
+            
+            if magnet_matches:
+                # Retorna o primeiro link magnet encontrado
+                magnet_link = magnet_matches[0]
+                # Decodifica entidades HTML se necessário
+                magnet_link = magnet_link.replace('&amp;', '&')
+                logger.info(f"Link magnet encontrado: {magnet_link[:100]}...")
+                return magnet_link
+            
+            # Fallback: tenta com BeautifulSoup
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Procura por links magnet
+            # Procura por links magnet em tags <a>
             magnet_links = soup.find_all('a', href=re.compile(r'^magnet:\?'))
             
             if magnet_links:
-                return magnet_links[0].get('href')
-            
-            # Se não encontrou diretamente, pode estar em um modal/popup
-            # Procura por botões de download
-            download_buttons = soup.find_all('a', string=re.compile(r'Baixar|Download', re.I))
-            
-            for button in download_buttons:
-                # Tenta clicar no botão (simula)
-                onclick = button.get('onclick', '')
-                href = button.get('href', '')
-                
-                if 'magnet:?' in href:
-                    return href
-                
-                # Se o botão abre um modal, precisamos fazer outra requisição
-                if href and href != '#':
-                    try:
-                        modal_response = self.session.get(urljoin(url, href), timeout=10)
-                        modal_soup = BeautifulSoup(modal_response.content, 'html.parser')
-                        modal_magnet = modal_soup.find('a', href=re.compile(r'^magnet:\?'))
-                        if modal_magnet:
-                            return modal_magnet.get('href')
-                    except:
-                        pass
+                magnet_link = magnet_links[0].get('href')
+                logger.info(f"Link magnet encontrado via BeautifulSoup: {magnet_link[:100]}...")
+                return magnet_link
             
             logger.warning(f"Link magnet não encontrado em {url}")
             return None
             
         except Exception as e:
             logger.error(f"Erro ao obter link magnet de {url}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None
     
     def search_by_genre(self, genre: str, media_type: str = "movie", limit: int = 10) -> List[Dict]:
