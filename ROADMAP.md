@@ -1,5 +1,7 @@
 # Roadmap e Planejamento de Versões
 
+> **📅 Início do Projeto**: 18 de maio de 2025
+
 > **⚠️ Aviso Importante**  
 > Este documento representa o planejamento atual do projeto, mas está sujeito a alterações. O ciclo de desenvolvimento pode ser ajustado conforme prioridades, feedback dos usuários e mudanças tecnológicas. As datas são estimativas e podem ser alteradas para garantir a qualidade do software.
 
