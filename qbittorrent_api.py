@@ -79,3 +79,90 @@ def get_transfer_info(sess, qb_url):
     except Exception as e:
         logger.error(f"Erro ao obter informações de transferência: {e}")
         return None
+
+def pause_torrent(sess, qb_url, torrent_hash):
+    """Pausa um torrent específico.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        torrent_hash: Hash do torrent a ser pausado
+        
+    Returns:
+        bool: True se pausado com sucesso, False caso contrário
+    """
+    try:
+        data = {"hashes": torrent_hash}
+        resp = sess.post(f"{qb_url}/api/v2/torrents/pause", data=data)
+        resp.raise_for_status()
+        logger.info(f"Torrent {torrent_hash} pausado com sucesso")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao pausar torrent {torrent_hash}: {e}")
+        return False
+
+def resume_torrent(sess, qb_url, torrent_hash):
+    """Retoma um torrent pausado.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        torrent_hash: Hash do torrent a ser retomado
+        
+    Returns:
+        bool: True se retomado com sucesso, False caso contrário
+    """
+    try:
+        data = {"hashes": torrent_hash}
+        resp = sess.post(f"{qb_url}/api/v2/torrents/resume", data=data)
+        resp.raise_for_status()
+        logger.info(f"Torrent {torrent_hash} retomado com sucesso")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao retomar torrent {torrent_hash}: {e}")
+        return False
+
+def delete_torrent(sess, qb_url, torrent_hash, delete_files=False):
+    """Remove um torrent.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        torrent_hash: Hash do torrent a ser removido
+        delete_files: Se True, remove também os arquivos baixados
+        
+    Returns:
+        bool: True se removido com sucesso, False caso contrário
+    """
+    try:
+        data = {
+            "hashes": torrent_hash,
+            "deleteFiles": "true" if delete_files else "false"
+        }
+        resp = sess.post(f"{qb_url}/api/v2/torrents/delete", data=data)
+        resp.raise_for_status()
+        logger.info(f"Torrent {torrent_hash} removido com sucesso (arquivos deletados: {delete_files})")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao remover torrent {torrent_hash}: {e}")
+        return False
+
+def get_torrent_info(sess, qb_url, torrent_hash):
+    """Obtém informações detalhadas de um torrent específico.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        torrent_hash: Hash do torrent
+        
+    Returns:
+        dict: Informações do torrent ou None em caso de erro
+    """
+    try:
+        resp = sess.get(f"{qb_url}/api/v2/torrents/info", params={"hashes": torrent_hash})
+        resp.raise_for_status()
+        torrents = resp.json()
+        return torrents[0] if torrents else None
+    except Exception as e:
+        logger.error(f"Erro ao obter informações do torrent {torrent_hash}: {e}")
+        return None

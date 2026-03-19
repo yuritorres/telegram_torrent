@@ -83,10 +83,14 @@
   - [ ] Níveis de acesso (admin, usuário, convidado)
   - [ ] Restrição de comandos por nível
   - [ ] Logs de acesso e auditoria
-- [ ] Melhorias na interface de listagem de torrents
-  - [ ] Formatação aprimorada com contadores
-  - [ ] Limitação de caracteres em nomes longos
-  - [ ] Separadores visuais entre categorias
+- [x] ~~**Melhorias na interface de listagem de torrents**~~ (Concluído: 18/03/2026)
+  - [x] ~~Formatação aprimorada com contadores e separadores visuais~~
+  - [x] ~~Limitação de caracteres em nomes longos (50 caracteres)~~
+  - [x] ~~Categorização inteligente (Ativos, Pausados, Finalizados, Com Erro)~~
+  - [x] ~~Informações detalhadas (progresso, tamanho, velocidade)~~
+  - [x] ~~Botões inline para ações (Atualizar, Pausar Todos, Retomar Todos, Detalhes)~~
+  - [x] ~~Processamento de callbacks para botões interativos~~
+  - [x] ~~Feedback instantâneo de ações executadas~~
 
 ### v0.0.1.6-alpha (Previsto: Mai/2026)
 **Objetivo**: Sincronização e automação básica

@@ -2,6 +2,8 @@ import requests
 import os
 import re
 import logging
+import json
+import time
 from dotenv import load_dotenv
 from typing import Optional, List, Dict, Any, Union, Callable
 import threading
@@ -154,6 +156,101 @@ def send_telegram(msg: str, chat_id: Optional[Union[str, int]] = None, parse_mod
     except Exception as e:
         logger.error(f"Erro inesperado ao enviar mensagem para o Telegram: {e}")
         return False
+
+def answer_callback_query(callback_id: str, text: str = None) -> bool:
+    """
+    Responde a um callback_query para remover o indicador de loading.
+    
+    Args:
+        callback_id: ID do callback query
+        text: Texto opcional para mostrar ao usuário
+        
+    Returns:
+        bool: True se respondido com sucesso
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        return False
+    
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
+    data = {"callback_query_id": callback_id}
+    if text:
+        data["text"] = text
+    
+    try:
+        resp = requests.post(url, json=data, timeout=10)
+        resp.raise_for_status()
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao responder callback query: {e}")
+        return False
+
+def handle_pause_all_torrents(sess, qb_url: str, chat_id: int) -> None:
+    """
+    Pausa todos os torrents ativos.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        chat_id: ID do chat para enviar mensagens
+    """
+    try:
+        if sess is None:
+            send_telegram("❌ Não conectado ao qBittorrent.", chat_id, use_keyboard=True)
+            return
+        
+        from qbittorrent_api import fetch_torrents
+        torrents = fetch_torrents(sess, qb_url)
+        
+        if not torrents:
+            send_telegram("📭 Nenhum torrent encontrado.", chat_id, use_keyboard=True)
+            return
+        
+        # Pausa todos os torrents
+        url = f"{qb_url}/api/v2/torrents/pause"
+        data = {"hashes": "all"}
+        resp = sess.post(url, data=data)
+        resp.raise_for_status()
+        
+        send_telegram(f"⏸️ Todos os torrents foram pausados ({len(torrents)} torrent(s)).", chat_id, use_keyboard=True)
+        logger.info(f"Todos os torrents pausados: {len(torrents)} torrent(s)")
+        
+    except Exception as e:
+        logger.error(f"Erro ao pausar todos os torrents: {e}")
+        send_telegram(f"❌ Erro ao pausar torrents: {str(e)}", chat_id, use_keyboard=True)
+
+def handle_resume_all_torrents(sess, qb_url: str, chat_id: int) -> None:
+    """
+    Retoma todos os torrents pausados.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        chat_id: ID do chat para enviar mensagens
+    """
+    try:
+        if sess is None:
+            send_telegram("❌ Não conectado ao qBittorrent.", chat_id, use_keyboard=True)
+            return
+        
+        from qbittorrent_api import fetch_torrents
+        torrents = fetch_torrents(sess, qb_url)
+        
+        if not torrents:
+            send_telegram("📭 Nenhum torrent encontrado.", chat_id, use_keyboard=True)
+            return
+        
+        # Retoma todos os torrents
+        url = f"{qb_url}/api/v2/torrents/resume"
+        data = {"hashes": "all"}
+        resp = sess.post(url, data=data)
+        resp.raise_for_status()
+        
+        send_telegram(f"▶️ Todos os torrents foram retomados ({len(torrents)} torrent(s)).", chat_id, use_keyboard=True)
+        logger.info(f"Todos os torrents retomados: {len(torrents)} torrent(s)")
+        
+    except Exception as e:
+        logger.error(f"Erro ao retomar todos os torrents: {e}")
+        send_telegram(f"❌ Erro ao retomar torrents: {str(e)}", chat_id, use_keyboard=True)
 
 # Função format_bytes movida para qbittorrent_api.py para evitar duplicação
 
@@ -325,23 +422,29 @@ def get_disk_space_info(sess, qb_url: str, chat_id: int) -> str:
     
     return "❌ Não foi possível obter as informações de espaço em disco."
 
-def list_torrents(sess, qb_url: str) -> str:
+def list_torrents(sess, qb_url: str, chat_id: Optional[Union[str, int]] = None) -> bool:
     """
-    Lista todos os torrents ativos, pausados, finalizados e parados.
+    Lista todos os torrents ativos, pausados, finalizados e parados com botões inline para ações.
     
     Args:
         sess: Sessão de autenticação do qBittorrent
         qb_url: URL base da API do qBittorrent
+        chat_id: ID do chat para enviar a mensagem
         
     Returns:
-        str: Mensagem formatada com a lista de torrents
+        bool: True se enviado com sucesso, False caso contrário
     """
     try:
         if sess is None:
-            return "❌ Não conectado ao qBittorrent."
+            send_telegram("❌ Não conectado ao qBittorrent.", chat_id, use_keyboard=True)
+            return False
             
-        from qbittorrent_api import fetch_torrents
+        from qbittorrent_api import fetch_torrents, format_bytes
         torrents = fetch_torrents(sess, qb_url)
+        
+        if not torrents:
+            send_telegram("📭 Nenhum torrent encontrado.", chat_id, use_keyboard=True)
+            return True
         
         ativos = []
         pausados = []
@@ -349,62 +452,125 @@ def list_torrents(sess, qb_url: str) -> str:
         parados = []
         
         # Limite de caracteres para nomes de torrents
-        MAX_NAME_LENGTH = 80
+        MAX_NAME_LENGTH = 50
         
         for t in torrents:
             estado = t.get('state', '')
             nome = t.get('name', 'Sem nome')
             progresso = t.get('progress', 0) * 100
+            hash_torrent = t.get('hash', '')
+            size = t.get('size', 0)
+            dlspeed = t.get('dlspeed', 0)
+            upspeed = t.get('upspeed', 0)
             
             # Truncar nome se for muito longo
-            if len(nome) > MAX_NAME_LENGTH:
-                nome = nome[:MAX_NAME_LENGTH] + "..."
+            nome_display = nome if len(nome) <= MAX_NAME_LENGTH else nome[:MAX_NAME_LENGTH] + "..."
             
-            if estado in ['downloading', 'stalledDL', 'checkingDL', 'queuedDL', 'forcedDL']:
-                ativos.append(f"{nome} ({progresso:.1f}%)")
+            # Formatar informações adicionais
+            size_str = format_bytes(size)
+            speed_info = ""
+            if dlspeed > 0:
+                speed_info = f" ↓{format_bytes(dlspeed)}/s"
+            if upspeed > 0:
+                speed_info += f" ↑{format_bytes(upspeed)}/s"
+            
+            torrent_info = {
+                'name': nome_display,
+                'hash': hash_torrent,
+                'progress': progresso,
+                'size': size_str,
+                'speed': speed_info,
+                'state': estado
+            }
+            
+            if estado in ['downloading', 'stalledDL', 'checkingDL', 'queuedDL', 'forcedDL', 'metaDL']:
+                ativos.append(torrent_info)
             elif estado in ['pausedDL', 'pausedUP']:
-                pausados.append(nome)
-            elif estado in ['uploading', 'seeding', 'finished', 'stalledUP', 'checkingUP', 'forcedUP']:
-                finalizados.append(nome)
-            elif estado in ['stalledDL', 'stalledUP', 'error', 'missingFiles', 'unknown']:
-                parados.append(f"{nome} ({estado})")
+                pausados.append(torrent_info)
+            elif estado in ['uploading', 'seeding', 'stalledUP', 'checkingUP', 'forcedUP', 'queuedUP']:
+                finalizados.append(torrent_info)
+            elif estado in ['error', 'missingFiles', 'unknown']:
+                parados.append(torrent_info)
         
-        # Cabeçalho com resumo
+        # Cabeçalho com resumo e estatísticas
         total = len(torrents)
-        msg_parts = [f"<b>📊 Status dos Torrents</b>"]
-        msg_parts.append(f"<i>Total: {total} torrent(s)</i>")
-        msg_parts.append("─" * 30)
+        msg_parts = ["<b>📊 GERENCIADOR DE TORRENTS</b>"]
+        msg_parts.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        msg_parts.append(f"<b>Total:</b> {total} torrent(s)")
+        msg_parts.append(f"<b>Ativos:</b> {len(ativos)} | <b>Pausados:</b> {len(pausados)} | <b>Finalizados:</b> {len(finalizados)}")
+        if parados:
+            msg_parts.append(f"<b>Com Erro:</b> {len(parados)}")
+        msg_parts.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        # Função auxiliar para criar linha de torrent
+        def format_torrent_line(t_info, show_progress=False):
+            line = f"<b>•</b> {t_info['name']}"
+            if show_progress:
+                line += f"\n   📊 {t_info['progress']:.1f}% | 💾 {t_info['size']}"
+                if t_info['speed']:
+                    line += f" | {t_info['speed']}"
+            else:
+                line += f"\n   💾 {t_info['size']}"
+            return line
         
         # Torrents Ativos
         if ativos:
-            msg_parts.append(f"\n<b>📦 Torrents Ativos ({len(ativos)}):</b>")
-            for t in ativos:
-                msg_parts.append(f"  • {t}")
-        else:
-            msg_parts.append(f"\n<b>📦 Torrents Ativos:</b> <i>Nenhum</i>")
+            msg_parts.append(f"\n<b>� DOWNLOADS ATIVOS ({len(ativos)})</b>")
+            msg_parts.append("─────────────────────────────")
+            for t in ativos[:5]:  # Limita a 5 para não sobrecarregar
+                msg_parts.append(format_torrent_line(t, show_progress=True))
+            if len(ativos) > 5:
+                msg_parts.append(f"\n<i>... e mais {len(ativos) - 5} torrent(s)</i>")
         
         # Torrents Pausados
         if pausados:
-            msg_parts.append(f"\n<b>⏸️ Torrents Pausados ({len(pausados)}):</b>")
-            for t in pausados:
-                msg_parts.append(f"  • {t}")
+            msg_parts.append(f"\n<b>⏸️ PAUSADOS ({len(pausados)})</b>")
+            msg_parts.append("─────────────────────────────")
+            for t in pausados[:3]:  # Limita a 3
+                msg_parts.append(format_torrent_line(t))
+            if len(pausados) > 3:
+                msg_parts.append(f"\n<i>... e mais {len(pausados) - 3} torrent(s)</i>")
         
         # Torrents Finalizados
         if finalizados:
-            msg_parts.append(f"\n<b>✅ Torrents Finalizados ({len(finalizados)}):</b>")
-            for t in finalizados:
-                msg_parts.append(f"  • {t}")
+            msg_parts.append(f"\n<b>✅ FINALIZADOS/SEEDING ({len(finalizados)})</b>")
+            msg_parts.append("─────────────────────────────")
+            for t in finalizados[:3]:  # Limita a 3
+                msg_parts.append(format_torrent_line(t))
+            if len(finalizados) > 3:
+                msg_parts.append(f"\n<i>... e mais {len(finalizados) - 3} torrent(s)</i>")
         
-        # Torrents com Erro/Parados
+        # Torrents com Erro
         if parados:
-            msg_parts.append(f"\n<b>❌ Torrents com Erro/Parados ({len(parados)}):</b>")
+            msg_parts.append(f"\n<b>❌ COM ERRO ({len(parados)})</b>")
+            msg_parts.append("─────────────────────────────")
             for t in parados:
-                msg_parts.append(f"  • {t}")
+                msg_parts.append(f"<b>•</b> {t['name']}\n   ⚠️ Estado: {t['state']}")
         
-        return "\n".join(msg_parts) if msg_parts else "Nenhum torrent encontrado."
+        msg_parts.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        msg_parts.append("<i>💡 Use os botões abaixo para gerenciar torrents</i>")
+        
+        # Criar botões inline para ações gerais
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': '🔄 Atualizar Lista', 'callback_data': 'torrent_refresh'},
+                    {'text': '⏸️ Pausar Todos', 'callback_data': 'torrent_pause_all'}
+                ],
+                [
+                    {'text': '▶️ Retomar Todos', 'callback_data': 'torrent_resume_all'},
+                    {'text': '📋 Detalhes', 'callback_data': 'torrent_details'}
+                ]
+            ]
+        }
+        
+        message = "\n".join(msg_parts)
+        return send_telegram(message, chat_id, parse_mode="HTML", reply_markup=inline_keyboard)
         
     except Exception as e:
-        return f"❌ Erro ao listar torrents: {str(e)}"
+        logger.error(f"Erro ao listar torrents: {e}")
+        send_telegram(f"❌ Erro ao listar torrents: {str(e)}", chat_id, use_keyboard=True)
+        return False
 
 
 async def process_youtube_download(url: str, chat_id: str):
@@ -616,6 +782,60 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 update_id = update.get('update_id')
                 if update_id is None:
                     continue
+                
+                # Atualiza o ID da última atualização processada
+                new_last_id = max(new_last_id, update_id)
+                
+                # Processa callback_query (botões inline)
+                if 'callback_query' in update:
+                    callback_query = update['callback_query']
+                    callback_id = callback_query.get('id')
+                    callback_data = callback_query.get('data', '')
+                    chat_id = callback_query.get('message', {}).get('chat', {}).get('id')
+                    user_id = str(callback_query.get('from', {}).get('id', ''))
+                    
+                    if not chat_id or not user_id:
+                        continue
+                    
+                    # Verifica autorização
+                    is_authorized = not AUTHORIZED_USERS or user_id in AUTHORIZED_USERS
+                    if not is_authorized:
+                        answer_callback_query(callback_id, "❌ Você não tem permissão para usar este bot.")
+                        continue
+                    
+                    # Responde ao callback para remover o indicador de loading
+                    answer_callback_query(callback_id)
+                    
+                    # Processa as ações dos botões
+                    if callback_data == 'torrent_refresh':
+                        list_torrents(sess, qb_url, chat_id)
+                    elif callback_data == 'torrent_pause_all':
+                        handle_pause_all_torrents(sess, qb_url, chat_id)
+                    elif callback_data == 'torrent_resume_all':
+                        handle_resume_all_torrents(sess, qb_url, chat_id)
+                    elif callback_data == 'torrent_details':
+                        help_text = """
+<b>📋 AJUDA - GERENCIADOR DE TORRENTS</b>
+
+<b>Botões disponíveis:</b>
+• 🔄 <b>Atualizar Lista</b> - Atualiza a lista de torrents
+• ⏸️ <b>Pausar Todos</b> - Pausa todos os torrents ativos
+• ▶️ <b>Retomar Todos</b> - Retoma todos os torrents pausados
+• 📋 <b>Detalhes</b> - Mostra esta mensagem de ajuda
+
+<b>Estados dos torrents:</b>
+• 📥 <b>Downloads Ativos</b> - Torrents sendo baixados
+• ⏸️ <b>Pausados</b> - Torrents pausados manualmente
+• ✅ <b>Finalizados/Seeding</b> - Torrents completos
+• ❌ <b>Com Erro</b> - Torrents com problemas
+
+<b>Comandos úteis:</b>
+• /qtorrents - Listar torrents
+• /qespaco - Ver espaço em disco
+"""
+                        send_telegram(help_text, chat_id, parse_mode="HTML", use_keyboard=True)
+                    
+                    continue
                     
                 message = update.get('message', {})
                 text = message.get('text', '').strip()
@@ -624,9 +844,6 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                 
                 if not text or not chat_id or not user_id:
                     continue
-                    
-                # Atualiza o ID da última mensagem processada
-                new_last_id = max(new_last_id, update_id)
                 
                 is_authorized = not AUTHORIZED_USERS or user_id in AUTHORIZED_USERS
                 
@@ -675,8 +892,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
                         send_telegram("Você não tem permissão para executar este comando.", chat_id)
                         continue
                     
-                    torrents_list = list_torrents(sess, qb_url)
-                    send_telegram(torrents_list, chat_id, parse_mode="HTML", use_keyboard=True)
+                    list_torrents(sess, qb_url, chat_id)
                     continue
                 
                 # Comandos do Jellyfin

@@ -1,5 +1,41 @@
 # Changelog - Telegram Torrent Bot
 
+## v0.0.1.6-alpha - 2026-03-18
+
+### feat
+- **Melhorias significativas na listagem de torrents (`/qtorrents`)**
+  - Interface aprimorada com formatação moderna, contadores e separadores visuais
+  - Informações detalhadas: nome (limitado a 50 caracteres), progresso, tamanho, velocidade de download/upload
+  - Categorização inteligente dos torrents:
+    - 📥 Downloads Ativos (exibe até 5 torrents)
+    - ⏸️ Pausados (exibe até 3 torrents)
+    - ✅ Finalizados/Seeding (exibe até 3 torrents)
+    - ❌ Com Erro (exibe todos)
+  - **Botões inline interativos** para gerenciamento rápido:
+    - 🔄 Atualizar Lista - atualiza a listagem em tempo real
+    - ⏸️ Pausar Todos - pausa todos os torrents ativos simultaneamente
+    - ▶️ Retomar Todos - retoma todos os torrents pausados de uma vez
+    - 📋 Detalhes - exibe ajuda contextual sobre o gerenciador
+  - Sistema de callbacks para processar ações dos botões inline
+  - Feedback instantâneo com confirmações de ações executadas
+
+### refactor
+- Adicionadas funções auxiliares para gerenciamento de torrents:
+  - `answer_callback_query()` - responde a callbacks do Telegram
+  - `handle_pause_all_torrents()` - pausa todos os torrents
+  - `handle_resume_all_torrents()` - retoma todos os torrents
+- Reescrita completa da função `list_torrents()` com nova assinatura
+- Integração de processamento de `callback_query` em `process_messages()`
+- Adicionadas funções na API do qBittorrent:
+  - `pause_torrent()` - pausa torrent específico
+  - `resume_torrent()` - retoma torrent específico
+  - `delete_torrent()` - remove torrent
+  - `get_torrent_info()` - obtém informações detalhadas
+
+### docs
+- Atualizado README.md com documentação completa das novas funcionalidades
+- Atualizado ROADMAP.md marcando melhorias de listagem como concluídas
+
 ## v0.0.1.4-alpha - 2025-01-15
 
 ### feat

@@ -190,14 +190,26 @@ O bot inclui um teclado personalizado que aparece na parte inferior do chat, for
 ### Comandos Gerais
 
 - `/start`: Inicia a interação com o bot e exibe mensagem de boas-vindas com o teclado personalizado
-- `/help` ou clique em ❓ **Ajuda**: Exibe a lista completa de comandos disponíveis e suas descrições
+- `/help` ou clique em **Ajuda**: Exibe a lista completa de comandos disponíveis e suas descrições
 
 ### Comandos do qBittorrent
 
 #### Gerenciamento de Torrents
 - `/qtorrents`: Lista todos os torrents ativos, pausados, finalizados e parados (requer autorização).
-  - Exibe nome, progresso, velocidade e status de cada torrent.
-  - Permite visualizar detalhes específicos de cada download.
+  - **Interface Aprimorada**: Formatação moderna com contadores e separadores visuais
+  - **Informações Detalhadas**: Exibe nome (limitado a 50 caracteres), progresso, tamanho, velocidade de download/upload
+  - **Categorização Inteligente**: 
+    - **Downloads Ativos** (até 5 exibidos)
+    - **Pausados** (até 3 exibidos)
+    - **Finalizados/Seeding** (até 3 exibidos)
+    - **Com Erro** (todos exibidos)
+  - **Botões Interativos**:
+    - **Atualizar Lista**: Atualiza a lista de torrents em tempo real
+    - **Pausar Todos**: Pausa todos os torrents ativos de uma vez
+    - **Retomar Todos**: Retoma todos os torrents pausados simultaneamente
+    - **Detalhes**: Exibe ajuda contextual sobre o gerenciador
+  - **Feedback Instantâneo**: Confirmação imediata de ações executadas
+  
 - **Links Magnet**: Envie qualquer link magnet válido para iniciar o download (requer autorização).
   - Formato: `magnet:?xt=urn:btih:...`
   - O bot confirmará o recebimento e iniciará o download automaticamente.
