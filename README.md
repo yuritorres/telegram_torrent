@@ -1,6 +1,6 @@
 # Telegram Torrent Bot
 
-Um bot para Telegram que interage com o qBittorrent para adicionar torrents via links magnet e fornecer atualizações de status.
+Um bot para Telegram que interage com o qBittorrent para adicionar torrents via links magnet, fornecer atualizações de status, sincronizar automaticamente com Jellyfin e oferecer estatísticas detalhadas de uso.
 
 ## Estrutura Modular
 
@@ -10,6 +10,9 @@ O projeto foi modularizado para facilitar a manutenção e a extensão:
 - `telegram_utils.py`: utilitários para envio e processamento de mensagens no Telegram.
 - `torrent_monitor.py`: monitoramento de torrents e notificações automáticas de status/conclusão.
 - `jellyfin_consolidated.py`: integração consolidada com o Jellyfin para gerenciamento de mídia e comandos via Telegram.
+- `sync_manager.py` (v0.0.1.7-alpha): gerenciador de sincronização entre qBittorrent e Jellyfin.
+- `statistics_manager.py` (v0.0.1.7-alpha): sistema de estatísticas e histórico de downloads.
+- `advanced_commands.py` (v0.0.1.7-alpha): handlers para comandos avançados de sincronização e estatísticas.
 
 ## Configuração
 
@@ -250,6 +253,80 @@ O bot inclui um teclado personalizado que aparece na parte inferior do chat, for
 - `Futuro`: Notificações automáticas de novos conteúdos
 
 > ℹ️ **Acompanhe nosso [ROADMAP.md](ROADMAP.md) para atualizações sobre o cronograma de lançamento e recursos planejados.**
+
+### Comandos v0.0.1.7-alpha - Sincronização e Estatísticas
+
+#### Sincronização qBittorrent ↔ Jellyfin
+- `/sync`: Sincronização manual entre qBittorrent e Jellyfin
+  - Dispara verificação imediata de torrents concluídos
+  - Atualiza biblioteca Jellyfin automaticamente
+  - Envia notificação quando conteúdo está disponível
+  - **Exemplo**: `/sync`
+
+- `/sync_status`: Exibe status atual da sincronização
+  - Estado do sincronizador (Ativo/Inativo)
+  - Contador de torrents concluídos processados
+  - Tamanho da fila de processamento
+  - Configurações de auto-scan e intervalo
+  - **Exemplo**: `/sync_status`
+
+#### Estatísticas e Monitoramento
+- `/stats [horas]`: Exibe estatísticas de uso de banda
+  - Uso de banda por período (padrão: 24 horas)
+  - Download e upload totais no período
+  - Média de velocidade
+  - **Exemplos**: 
+    - `/stats` (últimas 24 horas)
+    - `/stats 48` (últimas 48 horas)
+    - `/stats 12` (últimas 12 horas)
+
+- `/history [dias]`: Exibe histórico de downloads
+  - Lista de torrents concluídos recentemente
+  - Informações: nome, tamanho, data de conclusão
+  - Período configurável (padrão: 7 dias)
+  - **Exemplos**:
+    - `/history` (últimos 7 dias)
+    - `/history 14` (últimos 14 dias)
+    - `/history 3` (últimos 3 dias)
+
+#### Gerenciamento Avançado de Torrents
+- `/priority [hash] [prioridade]`: Altera prioridade de downloads
+  - **Prioridades disponíveis**:
+    - `top` - Move para o topo da fila
+    - `bottom` - Move para o final da fila
+    - `increase` - Aumenta a prioridade
+    - `decrease` - Diminui a prioridade
+  - **Exemplos**:
+    - `/priority abc123def456 top`
+    - `/priority abc123def456 increase`
+  - **Dica**: Use `/qtorrents` para ver os hashes dos torrents
+
+- `/remove [hash] [delete]`: Remove torrents com opção de deletar arquivos
+  - Remove apenas o torrent (mantém arquivos)
+  - Remove torrent e arquivos (com `delete`)
+  - **Exemplos**:
+    - `/remove abc123def456` (remove apenas torrent)
+    - `/remove abc123def456 delete` (remove torrent e arquivos)
+  - **⚠️ Atenção**: A remoção de arquivos é permanente!
+  - **Dica**: Use `/qtorrents` para ver os hashes dos torrents
+
+#### Funcionalidades Automáticas (v0.0.1.7-alpha)
+- **Detecção Automática**: Verifica periodicamente torrents concluídos
+- **Atualização Jellyfin**: Scan automático da biblioteca quando downloads terminam
+- **Notificações**: Avisa quando conteúdo está disponível no Jellyfin
+- **Registro de Estatísticas**: Coleta dados de banda a cada minuto
+- **Persistência**: Histórico mantido em arquivo JSON
+
+#### Configurações Adicionais
+Adicione ao seu arquivo `.env` as novas configurações:
+
+```env
+# CONFIGURAÇÕES DE SINCRONIZAÇÃO (v0.0.1.7-alpha)
+# Intervalo em segundos para verificar torrents concluídos (padrão: 30)
+SYNC_INTERVAL=30
+# Habilita/desabilita atualização automática da biblioteca Jellyfin (True/False)
+AUTO_SCAN_JELLYFIN=True
+```
 
 ### Comandos do YouTube
 

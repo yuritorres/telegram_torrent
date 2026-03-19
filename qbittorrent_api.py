@@ -166,3 +166,84 @@ def get_torrent_info(sess, qb_url, torrent_hash):
     except Exception as e:
         logger.error(f"Erro ao obter informações do torrent {torrent_hash}: {e}")
         return None
+
+def set_torrent_priority(sess, qb_url, torrent_hash, priority):
+    """Define a prioridade de um torrent.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        torrent_hash: Hash do torrent
+        priority: Prioridade ('increase' ou 'decrease' ou 'top' ou 'bottom')
+        
+    Returns:
+        bool: True se a prioridade foi alterada com sucesso, False caso contrário
+    """
+    try:
+        valid_priorities = ['increase', 'decrease', 'top', 'bottom']
+        if priority not in valid_priorities:
+            logger.error(f"Prioridade inválida: {priority}. Use: {', '.join(valid_priorities)}")
+            return False
+        
+        data = {"hashes": torrent_hash}
+        
+        if priority == 'increase':
+            endpoint = '/api/v2/torrents/increasePrio'
+        elif priority == 'decrease':
+            endpoint = '/api/v2/torrents/decreasePrio'
+        elif priority == 'top':
+            endpoint = '/api/v2/torrents/topPrio'
+        elif priority == 'bottom':
+            endpoint = '/api/v2/torrents/bottomPrio'
+        
+        resp = sess.post(f"{qb_url}{endpoint}", data=data)
+        resp.raise_for_status()
+        logger.info(f"Prioridade do torrent {torrent_hash} alterada para: {priority}")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao alterar prioridade do torrent {torrent_hash}: {e}")
+        return False
+
+def set_torrent_location(sess, qb_url, torrent_hash, location):
+    """Move um torrent para um novo local.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        torrent_hash: Hash do torrent
+        location: Novo caminho para os arquivos
+        
+    Returns:
+        bool: True se movido com sucesso, False caso contrário
+    """
+    try:
+        data = {
+            "hashes": torrent_hash,
+            "location": location
+        }
+        resp = sess.post(f"{qb_url}/api/v2/torrents/setLocation", data=data)
+        resp.raise_for_status()
+        logger.info(f"Torrent {torrent_hash} movido para: {location}")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao mover torrent {torrent_hash}: {e}")
+        return False
+
+def get_torrent_properties(sess, qb_url, torrent_hash):
+    """Obtém propriedades detalhadas de um torrent.
+    
+    Args:
+        sess: Sessão autenticada do qBittorrent
+        qb_url: URL base da API do qBittorrent
+        torrent_hash: Hash do torrent
+        
+    Returns:
+        dict: Propriedades do torrent ou None em caso de erro
+    """
+    try:
+        resp = sess.get(f"{qb_url}/api/v2/torrents/properties", params={"hash": torrent_hash})
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        logger.error(f"Erro ao obter propriedades do torrent {torrent_hash}: {e}")
+        return None

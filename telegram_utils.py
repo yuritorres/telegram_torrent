@@ -31,7 +31,11 @@ def set_bot_commands():
         {"command": "recentes", "description": "Ver itens recentemente adicionados (detalhado)"},
         {"command": "libraries", "description": "Listar bibliotecas do Jellyfin"},
         {"command": "status", "description": "Status do servidor Jellyfin"},
-        {"command": "youtube", "description": "Baixar vídeo do YouTube"}
+        {"command": "youtube", "description": "Baixar vídeo do YouTube"},
+        {"command": "stats", "description": "Estatísticas de banda e downloads"},
+        {"command": "history", "description": "Histórico de downloads"},
+        {"command": "sync", "description": "Sincronizar com Jellyfin"},
+        {"command": "priority", "description": "Gerenciar prioridade de torrents"}
     ]
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setMyCommands"
     try:
@@ -744,7 +748,7 @@ def send_video_to_telegram(file_path: str, chat_id: str, title: str):
         return False
 
 
-def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_url: str, jellyfin_manager=None) -> int:
+def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_url: str, jellyfin_manager=None, sync_manager=None, stats_manager=None) -> int:
     """
     Processa as mensagens recebidas do Telegram.
     
@@ -754,6 +758,8 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
         add_magnet_func: Função para adicionar um magnet link
         qb_url: URL base da API do qBittorrent
         jellyfin_manager: Instância do JellyfinManager (opcional)
+        sync_manager: Instância do SyncManager (opcional)
+        stats_manager: Instância do StatisticsManager (opcional)
         
     Returns:
         int: ID da última atualização processada
@@ -953,6 +959,71 @@ def process_messages(sess, last_update_id: int, add_magnet_func: callable, qb_ur
 
 📝 *Dica:* Você pode enviar o link diretamente sem usar o comando!"""
                     send_telegram(youtube_help, chat_id, parse_mode="Markdown", use_keyboard=True)
+                    continue
+                
+                # Comandos v0.0.1.7-alpha - Estatísticas e Sincronização
+                elif text.startswith("/stats"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from advanced_commands import handle_stats_command
+                    parts = text.split()
+                    hours = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 24
+                    handle_stats_command(stats_manager, chat_id, hours)
+                    continue
+                
+                elif text.startswith("/history"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from advanced_commands import handle_history_command
+                    parts = text.split()
+                    days = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 7
+                    handle_history_command(stats_manager, chat_id, days)
+                    continue
+                
+                elif text == "/sync":
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from advanced_commands import handle_sync_command
+                    handle_sync_command(sync_manager, chat_id)
+                    continue
+                
+                elif text == "/sync_status":
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from advanced_commands import handle_sync_status_command
+                    handle_sync_status_command(sync_manager, chat_id)
+                    continue
+                
+                elif text.startswith("/priority"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from advanced_commands import handle_priority_command
+                    parts = text.split()
+                    torrent_hash = parts[1] if len(parts) > 1 else None
+                    priority = parts[2] if len(parts) > 2 else None
+                    handle_priority_command(sess, qb_url, chat_id, torrent_hash, priority)
+                    continue
+                
+                elif text.startswith("/remove"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    from advanced_commands import handle_remove_command
+                    parts = text.split()
+                    torrent_hash = parts[1] if len(parts) > 1 else None
+                    delete_files = len(parts) > 2 and parts[2].lower() == 'delete'
+                    handle_remove_command(sess, qb_url, chat_id, torrent_hash, delete_files)
                     continue
                 
                 # Comandos do YTS Brasil

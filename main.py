@@ -71,6 +71,26 @@ def main():
         logger.error(f"Erro ao inicializar o gerenciador do Jellyfin: {e}")
         jellyfin_manager = None
     
+    # Inicializa o gerenciador de sincronização (v0.0.1.7-alpha)
+    sync_manager = None
+    if sess and jellyfin_manager and jellyfin_manager.is_available():
+        try:
+            from sync_manager import SyncManager
+            sync_manager = SyncManager(sess, QB_URL, jellyfin_manager, send_telegram)
+            logger.info("SyncManager inicializado com sucesso")
+        except Exception as e:
+            logger.error(f"Erro ao inicializar SyncManager: {e}")
+    
+    # Inicializa o gerenciador de estatísticas (v0.0.1.7-alpha)
+    stats_manager = None
+    if sess:
+        try:
+            from statistics_manager import StatisticsManager
+            stats_manager = StatisticsManager(sess, QB_URL)
+            logger.info("StatisticsManager inicializado com sucesso")
+        except Exception as e:
+            logger.error(f"Erro ao inicializar StatisticsManager: {e}")
+    
     # Inicializa o cliente WhatsApp WAHA
     waha_enabled = os.getenv('WAHA_URL') and os.getenv('WAHA_API_KEY')
     flask_app = None
@@ -118,7 +138,7 @@ def main():
         nonlocal last_update_id, sess
         while True:
             try:
-                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager)
+                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager, sync_manager, stats_manager)
                 time.sleep(1)
             except Exception as e:
                 print(f"Erro no processamento de mensagens: {e}")
@@ -137,6 +157,24 @@ def main():
                 jellyfin_notifier.start_monitoring()
             except Exception as e:
                 logger.error(f"Erro no monitoramento do Jellyfin: {e}")
+    
+    def sync_manager_thread():
+        if sync_manager is not None:
+            try:
+                sync_manager.start()
+                while True:
+                    time.sleep(1)
+            except Exception as e:
+                logger.error(f"Erro no SyncManager: {e}")
+    
+    def stats_recorder_thread():
+        if stats_manager is not None:
+            try:
+                while True:
+                    stats_manager.record_bandwidth()
+                    time.sleep(60)
+            except Exception as e:
+                logger.error(f"Erro no StatisticsManager: {e}")
     
     def flask_webhook_thread():
         if flask_app is not None:
@@ -173,6 +211,20 @@ def main():
         threads.append(t4)
         t4.start()
         logger.info("Thread do servidor Flask para WhatsApp iniciada")
+    
+    # Thread do SyncManager (v0.0.1.7-alpha)
+    if sync_manager is not None:
+        t5 = threading.Thread(target=sync_manager_thread, daemon=True)
+        threads.append(t5)
+        t5.start()
+        logger.info("Thread do SyncManager iniciada")
+    
+    # Thread do StatisticsManager (v0.0.1.7-alpha)
+    if stats_manager is not None:
+        t6 = threading.Thread(target=stats_recorder_thread, daemon=True)
+        threads.append(t6)
+        t6.start()
+        logger.info("Thread do StatisticsManager iniciada")
     
     # Mantém o programa em execução
     try:

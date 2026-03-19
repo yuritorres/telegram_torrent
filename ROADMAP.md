@@ -92,24 +92,33 @@
   - [x] ~~Processamento de callbacks para botões interativos~~
   - [x] ~~Feedback instantâneo de ações executadas~~
 
-### v0.0.1.6-alpha (Previsto: Mai/2026)
+### v0.0.1.7-alpha (Concluído: 18/03/2026)
 **Objetivo**: Sincronização e automação básica
 
 #### Funcionalidades:
-- [ ] Sincronização de status entre qBittorrent e Jellyfin
-  - [ ] Detecção automática de downloads concluídos
-  - [ ] Atualização automática da biblioteca do Jellyfin
-  - [ ] Notificação quando conteúdo estiver disponível
-- [ ] Gerenciamento avançado de torrents
-  - [ ] Pausar/retomar torrents via comando
-  - [ ] Remover torrents com opção de manter/deletar arquivos
-  - [ ] Priorização de downloads
-- [ ] Estatísticas detalhadas
-  - [ ] Uso de banda por período
-  - [ ] Histórico de downloads
-  - [ ] Gráficos de atividade
+- [x] ~~Sincronização de status entre qBittorrent e Jellyfin~~
+  - [x] ~~Detecção automática de downloads concluídos~~
+  - [x] ~~Atualização automática da biblioteca do Jellyfin~~
+  - [x] ~~Notificação quando conteúdo estiver disponível~~
+- [x] ~~Gerenciamento avançado de torrents~~
+  - [x] ~~Pausar/retomar torrents via comando~~ (Concluído: 18/03/2026)
+  - [x] ~~Remover torrents com opção de manter/deletar arquivos~~
+  - [x] ~~Priorização de downloads~~
+- [x] ~~Estatísticas detalhadas~~
+  - [x] ~~Uso de banda por período~~
+  - [x] ~~Histórico de downloads~~
+  - [x] ~~Gráficos de atividade~~
 
-### v0.0.1.7-alpha (Previsto: Jun/2026)
+#### Arquivos criados/modificados:
+- `sync_manager.py` - Gerenciador de sincronização qBittorrent-Jellyfin
+- `statistics_manager.py` - Gerenciador de estatísticas e histórico
+- `advanced_commands.py` - Handlers para novos comandos
+- `qbittorrent_api.py` - Adicionadas funções de priorização e remoção
+- `main.py` - Integração dos novos gerenciadores
+- `telegram_utils.py` - Novos comandos: /stats, /history, /sync, /priority, /remove
+- `.env.example` - Novas configurações: SYNC_INTERVAL, AUTO_SCAN_JELLYFIN
+
+### v0.0.1.8-alpha (Previsto: Jun/2026)
 **Objetivo**: Múltiplos servidores e configurações avançadas
 
 #### Funcionalidades:
@@ -126,7 +135,7 @@
   - [ ] Exportação/importação de dados
   - [ ] Histórico de versões
 
-### v0.0.1.8-alpha (Previsto: Jul/2026)
+### v0.0.1.9-alpha (Previsto: Jul/2026)
 **Objetivo**: Melhorias de YouTube e mídia
 
 #### Funcionalidades:
