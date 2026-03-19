@@ -1,5 +1,39 @@
 # Changelog - Telegram Torrent Bot
 
+## v0.0.1.8-alpha - 2026-03-19
+
+### refactor
+- **Reestruturação completa do projeto para Feature-based Package Structure**
+  - Criada estrutura `src/` com organização modular por features
+  - `src/core/`: Configurações centralizadas, logging e exceções customizadas
+  - `src/integrations/`: Integrações com qBittorrent, Jellyfin, Telegram, WhatsApp e YouTube
+  - `src/services/`: Serviços de negócio (sincronização, estatísticas, YTSBR)
+  - `src/commands/`: Handlers de comandos separados por plataforma
+  - `src/utils/`: Utilitários compartilhados (formatadores)
+  - Todos os arquivos legados convertidos em shims de compatibilidade
+  - `main.py` atualizado para importar exclusivamente de `src/`
+  - Mantida backward compatibility total com código existente
+
+### feat
+- **Configuração centralizada em `src/core/config.py`**
+  - Carregamento único de variáveis de ambiente via `dotenv`
+  - Adicionadas todas as variáveis do `.env`:
+    - `QBITTORRENT_STORAGE_PATH`
+    - `WAHA_DASHBOARD_USERNAME`, `WAHA_DASHBOARD_PASSWORD`
+    - `WAHA_SWAGGER_USERNAME`, `WAHA_SWAGGER_PASSWORD`
+  - Eliminada duplicação de `load_dotenv()` em múltiplos arquivos
+
+### docs
+- Atualizado `README.md` com nova estrutura de pacotes
+- Documentação completa de todas as variáveis de ambiente
+- Diagrama visual da estrutura `src/`
+- Instruções de configuração atualizadas
+
+### test
+- Verificação de imports bem-sucedida em todos os módulos
+- Build Docker confirmado sem erros
+- Compatibilidade total com código legado validada
+
 ## v0.0.1.6-alpha - 2026-03-18
 
 ### feat

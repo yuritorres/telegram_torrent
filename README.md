@@ -2,17 +2,37 @@
 
 Um bot para Telegram que interage com o qBittorrent para adicionar torrents via links magnet, fornecer atualizações de status, sincronizar automaticamente com Jellyfin e oferecer estatísticas detalhadas de uso.
 
-## Estrutura Modular
+## Estrutura Modular (Feature-based Package Structure)
 
-O projeto foi modularizado para facilitar a manutenção e a extensão:
-- `main.py`: ponto de entrada do bot, responsável por orquestrar as chamadas entre os módulos.
-- `qbittorrent_api.py`: funções para autenticação e interação com o qBittorrent.
-- `telegram_utils.py`: utilitários para envio e processamento de mensagens no Telegram.
-- `torrent_monitor.py`: monitoramento de torrents e notificações automáticas de status/conclusão.
-- `jellyfin_consolidated.py`: integração consolidada com o Jellyfin para gerenciamento de mídia e comandos via Telegram.
-- `sync_manager.py` (v0.0.1.7-alpha): gerenciador de sincronização entre qBittorrent e Jellyfin.
-- `statistics_manager.py` (v0.0.1.7-alpha): sistema de estatísticas e histórico de downloads.
-- `advanced_commands.py` (v0.0.1.7-alpha): handlers para comandos avançados de sincronização e estatísticas.
+O projeto foi refatorado para uma estrutura de pacotes baseada em features, facilitando manutenção, escalabilidade e organização:
+
+```
+src/
+├── core/              # Configurações e utilitários centrais
+│   ├── config.py      # Carregamento centralizado de variáveis de ambiente
+│   ├── logging_config.py  # Configuração de logging
+│   └── exceptions.py  # Exceções customizadas
+├── integrations/      # Integrações com serviços externos
+│   ├── qbittorrent/   # Cliente e monitor do qBittorrent
+│   ├── jellyfin/      # Cliente, formatador, manager e notifier do Jellyfin
+│   ├── telegram/      # Cliente, teclados, utils e handlers do Telegram
+│   ├── whatsapp/      # Cliente WAHA, utils e webhook
+│   └── youtube/       # Downloader e utils do YouTube
+├── services/          # Serviços de negócio
+│   ├── sync_service.py        # Sincronização qBittorrent ↔ Jellyfin
+│   ├── statistics_service.py  # Estatísticas e histórico
+│   └── ytsbr_service.py       # Integração YTS Brasil
+├── commands/          # Handlers de comandos
+│   ├── telegram_commands.py   # Comandos avançados do Telegram
+│   ├── ytsbr_commands.py      # Comandos YTSBR
+│   └── whatsapp_commands.py   # Comandos WhatsApp
+└── utils/             # Utilitários compartilhados
+    └── formatters.py  # Formatação de bytes, duração, etc.
+```
+
+**Arquivos legados** (root): Mantidos como shims de compatibilidade, re-exportando de `src/` para garantir backward compatibility.
+
+**Ponto de entrada**: `main.py` - orquestra a inicialização de todos os serviços e integrações.
 
 ## Configuração
 
@@ -23,15 +43,46 @@ O projeto foi modularizado para facilitar a manutenção e a extensão:
    ```bash
    pip install -r requirements.txt
    ```
-3. Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+3. Crie um arquivo `.env` na raiz do projeto com as variáveis de ambiente necessárias:
    ```env
-   QB_URL=http://localhost:8080 # URL do seu qBittorrent WebUI
-   QB_USER=seu_usuario
+   # qBittorrent
+   QB_URL=http://localhost:8080
+   QB_USER=admin
    QB_PASS=sua_senha
-   TELEGRAM_BOT_TOKEN=seu_token_do_bot_telegram
-   TELEGRAM_CHAT_ID=seu_chat_id_do_telegram # O ID do chat onde o bot enviará mensagens
-   INTERVALO=60 # Intervalo em segundos entre as verificações de status (opcional, padrão é 60)
-   AUTHORIZED_USERS=123456789,987654321 # (Opcional) IDs dos usuários autorizados a executar comandos críticos, separados por vírgula. Se não definido, qualquer usuário pode executar comandos.
+   INTERVALO=30
+   QBITTORRENT_STORAGE_PATH=/
+
+   # Telegram
+   TELEGRAM_BOT_TOKEN=seu_token_do_bot
+   TELEGRAM_CHAT_ID=seu_chat_id
+   AUTHORIZED_USERS=123456789,987654321
+   EXPIRAR_MSG=30
+
+   # Jellyfin
+   JELLYFIN_URL=http://localhost:8096
+   JELLYFIN_USERNAME=seu_usuario
+   JELLYFIN_PASSWORD=sua_senha
+   JELLYFIN_API_KEY=sua_api_key
+   JELLYFIN_NOTIFICATIONS_ENABLED=True
+   JELLYFIN_NOTIFICATION_INTERVAL=1800
+
+   # WhatsApp (WAHA)
+   WAHA_URL=http://localhost:3000
+   WAHA_API_KEY=local-dev-key-123
+   WAHA_SESSION=default
+   AUTHORIZED_WHATSAPP_NUMBERS=5511999999999
+   WAHA_DASHBOARD_USERNAME=admin
+   WAHA_DASHBOARD_PASSWORD=admin123
+   WAHA_SWAGGER_USERNAME=admin
+   WAHA_SWAGGER_PASSWORD=swagger123
+
+   # YouTube
+   YOUTUBE_DOWNLOAD_DIR=downloads
+   REMOVE_AFTER_SEND=False
+
+   # Sincronização
+   SYNC_INTERVAL=30
+   AUTO_SCAN_JELLYFIN=True
    ```
 4. Obtenha seu `TG_CHAT_ID` enviando uma mensagem para o seu bot e acessando `https://api.telegram.org/botSEU_TOKEN/getUpdates`.
 
