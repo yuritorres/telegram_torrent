@@ -2,14 +2,11 @@
 import time
 import os
 import threading
-import asyncio
-import requests
 import logging
 from dotenv import load_dotenv
-from telegram_utils import send_telegram, process_messages, set_bot_commands
-from jellyfin_consolidated import JellyfinManager
-from jellyfin_notifier import JellyfinNotifier
-from waha_utils import init_waha_client, create_webhook_app
+from src.integrations.telegram import send_telegram, process_messages, set_bot_commands
+from src.integrations.jellyfin import JellyfinManager, JellyfinNotifier
+from src.integrations.whatsapp import init_waha_client, create_webhook_app
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,9 +22,7 @@ INTERVALO = int(os.getenv('INTERVALO', 60))
 
 # Tenta importar os módulos necessários
 try:
-    from qbittorrent_api import login_qb, fetch_torrents, resumo_torrents, add_magnet
-    from telegram_utils import send_telegram, process_messages
-    from torrent_monitor import monitor_torrents
+    from src.integrations.qbittorrent import login_qb, fetch_torrents, add_magnet, monitor_torrents
     QBITTORRENT_AVAILABLE = True
 except ImportError as e:
     print(f"Aviso: Módulos do qBittorrent não encontrados. {e}")
@@ -75,7 +70,7 @@ def main():
     sync_manager = None
     if sess and jellyfin_manager and jellyfin_manager.is_available():
         try:
-            from sync_manager import SyncManager
+            from src.services import SyncManager
             sync_manager = SyncManager(sess, QB_URL, jellyfin_manager, send_telegram)
             logger.info("SyncManager inicializado com sucesso")
         except Exception as e:
@@ -85,7 +80,7 @@ def main():
     stats_manager = None
     if sess:
         try:
-            from statistics_manager import StatisticsManager
+            from src.services import StatisticsManager
             stats_manager = StatisticsManager(sess, QB_URL)
             logger.info("StatisticsManager inicializado com sucesso")
         except Exception as e:
@@ -147,7 +142,7 @@ def main():
     def monitor_thread():
         if sess is not None and QBITTORRENT_AVAILABLE:
             try:
-                monitor_torrents(sess, QB_URL, fetch_torrents, resumo_torrents, INTERVALO)
+                monitor_torrents(sess, QB_URL, send_telegram, INTERVALO)
             except Exception as e:
                 print(f"Erro no monitoramento de torrents: {e}")
     
