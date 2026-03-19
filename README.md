@@ -251,6 +251,67 @@ O bot inclui um teclado personalizado que aparece na parte inferior do chat, for
 
 > ℹ️ **Acompanhe nosso [ROADMAP.md](ROADMAP.md) para atualizações sobre o cronograma de lançamento e recursos planejados.**
 
+### Comandos do YouTube
+
+- `/youtube`: Baixar vídeos do YouTube e enviar para o Telegram
+  - **Detecção Automática**: Envie qualquer URL do YouTube diretamente no chat
+  - **Formatos Suportados**:
+    - `youtube.com/watch?v=...`
+    - `youtu.be/...`
+    - `youtube.com/shorts/...`
+  - **Informações do Vídeo**: Exibe título, canal, duração, visualizações e data de publicação
+  - **Download Assíncrono**: Monitoramento de progresso em tempo real
+  - **Envio Automático**: Vídeo enviado automaticamente após conclusão do download
+  - **Limitações**:
+    - Tamanho máximo: 50MB (limite do Telegram)
+    - Apenas vídeos públicos
+    - Timeout de 10 minutos por download
+  - **Exemplo**: `/youtube https://www.youtube.com/watch?v=dQw4w9WgXcQ`
+
+### Comandos do YTS Brasil
+
+#### Busca de Filmes
+- `/ytsbr [termo]`: Busca filmes no YTS Brasil
+  - Sem termo: Exibe filmes populares
+  - Com termo: Busca por título específico
+  - **Exemplo**: `/ytsbr Matrix`
+
+- `/ytsbr_generos`: Lista todos os gêneros de filmes disponíveis
+- `/ytsbr_genero [gênero]`: Busca filmes por gênero específico
+  - **Exemplo**: `/ytsbr_genero acao`
+
+#### Busca de Séries
+- `/ytsbr_series [termo]`: Busca séries no YTS Brasil
+  - Sem termo: Exibe séries populares
+  - Com termo: Busca por título específico
+  - **Exemplo**: `/ytsbr_series Breaking Bad`
+
+- `/ytsbr_series_generos`: Lista todos os gêneros de séries disponíveis
+- `/ytsbr_series_genero [gênero]`: Busca séries por gênero específico
+  - **Exemplo**: `/ytsbr_series_genero drama`
+
+#### Busca de Animes
+- `/ytsbr_anime [termo]`: Busca animes no YTS Brasil
+  - Sem termo: Exibe animes populares
+  - Com termo: Busca por título específico
+  - **Exemplo**: `/ytsbr_anime Naruto`
+
+- `/ytsbr_anime_generos`: Lista todos os gêneros de animes disponíveis
+- `/ytsbr_anime_genero [gênero]`: Busca animes por gênero específico
+  - **Exemplo**: `/ytsbr_anime_genero acao`
+
+#### Download de Torrents
+- `/ytsbr_baixar [número]`: Baixa o torrent selecionado da última busca
+  - **Exemplo**: `/ytsbr_baixar 1`
+  - O número corresponde à posição do item na lista de resultados
+  - Sistema de cache mantém os últimos resultados de busca por usuário
+
+#### Funcionalidades YTS Brasil
+- **Seleção Interativa**: Resultados numerados para fácil seleção
+- **Informações Detalhadas**: Título, ano, qualidade, tamanho, gêneros
+- **Cache Inteligente**: Mantém resultados de busca para download rápido
+- **Integração com qBittorrent**: Download automático após seleção
+
 ### Notificações Automáticas
 
 O bot enviará automaticamente notificações para:
