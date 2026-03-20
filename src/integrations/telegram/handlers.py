@@ -115,7 +115,7 @@ async def process_youtube_download(url: str, chat_id: str) -> None:
         send_telegram(f"❌ Erro inesperado: {str(e)}", chat_id, use_keyboard=True)
 
 
-def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, jellyfin_manager=None, sync_manager=None, stats_manager=None) -> int:
+def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, jellyfin_manager=None, sync_manager=None, stats_manager=None, docker_manager=None) -> int:
     if not TELEGRAM_BOT_TOKEN:
         logger.error("Token do bot do Telegram não configurado")
         return last_update_id
@@ -356,6 +356,65 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     torrent_hash = parts[1] if len(parts) > 1 else None
                     delete_files = len(parts) > 2 and parts[2].lower() == 'delete'
                     handle_remove_command(sess, qb_url, chat_id, torrent_hash, delete_files)
+                    continue
+
+                elif text == "/docker_list":
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.docker_commands import handle_docker_list_command
+                    handle_docker_list_command(docker_manager, chat_id)
+                    continue
+
+                elif text.startswith("/docker_start"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.docker_commands import handle_docker_start_command
+                    parts = text.split(maxsplit=1)
+                    container_name = parts[1] if len(parts) > 1 else None
+                    handle_docker_start_command(docker_manager, chat_id, container_name)
+                    continue
+
+                elif text.startswith("/docker_stop"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.docker_commands import handle_docker_stop_command
+                    parts = text.split(maxsplit=1)
+                    container_name = parts[1] if len(parts) > 1 else None
+                    handle_docker_stop_command(docker_manager, chat_id, container_name)
+                    continue
+
+                elif text.startswith("/docker_restart"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.docker_commands import handle_docker_restart_command
+                    parts = text.split(maxsplit=1)
+                    container_name = parts[1] if len(parts) > 1 else None
+                    handle_docker_restart_command(docker_manager, chat_id, container_name)
+                    continue
+
+                elif text.startswith("/docker_stats"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.docker_commands import handle_docker_stats_command
+                    parts = text.split(maxsplit=1)
+                    container_name = parts[1] if len(parts) > 1 else None
+                    handle_docker_stats_command(docker_manager, chat_id, container_name)
+                    continue
+
+                elif text.startswith("/docker_logs"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.docker_commands import handle_docker_logs_command
+                    parts = text.split()
+                    container_name = parts[1] if len(parts) > 1 else None
+                    tail = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 30
+                    handle_docker_logs_command(docker_manager, chat_id, container_name, tail)
                     continue
 
                 elif text.startswith("/ytsbr_baixar"):

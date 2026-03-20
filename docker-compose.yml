@@ -10,6 +10,8 @@ services:
     volumes:
       # Mount the downloads folder to persist downloaded content
       - ./downloads:/app/downloads
+      # Mount Docker socket to manage containers from inside the container (Windows)
+      - //var/run/docker.sock:/var/run/docker.sock
     networks:
       - telegram-torrent-network
     depends_on:

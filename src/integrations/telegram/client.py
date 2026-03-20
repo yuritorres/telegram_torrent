@@ -25,6 +25,12 @@ def set_bot_commands() -> None:
         {"command": "history", "description": "Histórico de downloads"},
         {"command": "sync", "description": "Sincronizar com Jellyfin"},
         {"command": "priority", "description": "Gerenciar prioridade de torrents"},
+        {"command": "docker_list", "description": "Listar containers Docker"},
+        {"command": "docker_start", "description": "Iniciar container Docker"},
+        {"command": "docker_stop", "description": "Parar container Docker"},
+        {"command": "docker_restart", "description": "Reiniciar container Docker"},
+        {"command": "docker_stats", "description": "Estatísticas de container"},
+        {"command": "docker_logs", "description": "Ver logs de container"},
     ]
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setMyCommands"
     try:

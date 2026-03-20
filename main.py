@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from src.integrations.telegram import send_telegram, process_messages, set_bot_commands
 from src.integrations.jellyfin import JellyfinManager, JellyfinNotifier
 from src.integrations.whatsapp import init_waha_client, create_webhook_app
+from src.integrations.docker import DockerManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -86,6 +87,18 @@ def main():
         except Exception as e:
             logger.error(f"Erro ao inicializar StatisticsManager: {e}")
     
+    # Inicializa o gerenciador Docker
+    docker_manager = None
+    try:
+        docker_manager = DockerManager()
+        if docker_manager.is_available():
+            logger.info("Docker configurado e disponível.")
+        else:
+            logger.warning("Docker não disponível.")
+    except Exception as e:
+        logger.error(f"Erro ao inicializar o gerenciador Docker: {e}")
+        docker_manager = None
+    
     # Inicializa o cliente WhatsApp WAHA
     waha_enabled = os.getenv('WAHA_URL') and os.getenv('WAHA_API_KEY')
     flask_app = None
@@ -133,7 +146,7 @@ def main():
         nonlocal last_update_id, sess
         while True:
             try:
-                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager, sync_manager, stats_manager)
+                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager, sync_manager, stats_manager, docker_manager)
                 time.sleep(1)
             except Exception as e:
                 print(f"Erro no processamento de mensagens: {e}")
