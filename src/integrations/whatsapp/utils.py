@@ -12,6 +12,7 @@ WAHA_URL = os.getenv('WAHA_URL', 'http://localhost:3000')
 WAHA_API_KEY = os.getenv('WAHA_API_KEY', 'local-dev-key-123')
 WAHA_SESSION = os.getenv('WAHA_SESSION', 'default')
 AUTHORIZED_WHATSAPP_NUMBERS = os.getenv('AUTHORIZED_WHATSAPP_NUMBERS', '').split(',')
+AUTHORIZED_WHATSAPP_GROUP = os.getenv('AUTHORIZED_WHATSAPP_GROUP', '').strip()
 
 waha_client: Optional[WAHAApi] = None
 
@@ -62,6 +63,36 @@ def is_authorized_whatsapp(phone_number: str) -> bool:
         if clean_number == clean_authorized or clean_number.endswith(clean_authorized) or clean_authorized in clean_number:
             return True
     return False
+
+
+def is_authorized_chat(chat_id: str, from_number: str) -> bool:
+    """
+    Valida se o chat é autorizado:
+    - Mensagens diretas de usuários autorizados são permitidas
+    - Mensagens de grupos só são permitidas se o grupo estiver configurado
+    - Se nenhum grupo estiver configurado, mensagens de grupos são bloqueadas
+    
+    Args:
+        chat_id: ID do chat (pode ser individual ou grupo)
+        from_number: Número do remetente
+    
+    Returns:
+        True se o chat é autorizado, False caso contrário
+    """
+    is_group = '@g.us' in chat_id
+    
+    if is_group:
+        if not AUTHORIZED_WHATSAPP_GROUP:
+            logger.warning(f"Mensagem de grupo bloqueada (nenhum grupo configurado): {chat_id}")
+            return False
+        
+        if chat_id == AUTHORIZED_WHATSAPP_GROUP:
+            return is_authorized_whatsapp(from_number)
+        else:
+            logger.warning(f"Mensagem de grupo não autorizado bloqueada: {chat_id}")
+            return False
+    else:
+        return is_authorized_whatsapp(from_number)
 
 
 def format_chat_id(phone_number: str) -> str:

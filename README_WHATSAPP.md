@@ -78,6 +78,7 @@ WAHA_URL=http://waha:3000
 WAHA_API_KEY=local-dev-key-123
 WAHA_SESSION=default
 AUTHORIZED_WHATSAPP_NUMBERS=5511999999999,5511888888888
+AUTHORIZED_WHATSAPP_GROUP=5511999999999-1234567890@g.us
 
 # Dashboard
 WAHA_DASHBOARD_USERNAME=admin
@@ -232,12 +233,39 @@ Os mesmos comandos do Telegram podem ser adaptados para WhatsApp:
 2. **Números Autorizados**: Configure `AUTHORIZED_WHATSAPP_NUMBERS` no `.env`
 3. **Dashboard/Swagger**: Protegidos por senha
 
+### Controle de Acesso
+
+O bot implementa um sistema de filtragem de mensagens para garantir que apenas usuários e grupos autorizados possam interagir:
+
+#### Mensagens Diretas (Individuais)
+- Apenas números configurados em `AUTHORIZED_WHATSAPP_NUMBERS` podem enviar comandos
+- Formato: `5511999999999,5511888888888` (separados por vírgula)
+
+#### Mensagens de Grupos
+- **Se `AUTHORIZED_WHATSAPP_GROUP` estiver vazio**: Todas as mensagens de grupos são **ignoradas**
+- **Se `AUTHORIZED_WHATSAPP_GROUP` estiver configurado**: Apenas mensagens do grupo específico são aceitas
+- Formato do ID do grupo: `5511999999999-1234567890@g.us`
+- Dentro do grupo autorizado, apenas usuários em `AUTHORIZED_WHATSAPP_NUMBERS` podem executar comandos
+
+#### Como obter o ID do grupo
+1. Envie uma mensagem no grupo desejado
+2. Verifique os logs do bot para ver o `chat_id` da mensagem
+3. Copie o ID completo (formato: `número-número@g.us`)
+4. Configure em `AUTHORIZED_WHATSAPP_GROUP` no arquivo `.env`
+
+**Exemplo de log:**
+```
+INFO: Mensagem de 5511999999999@c.us no chat 5511888888888-1234567890@g.us: /status
+WARNING: Chat não autorizado - Chat: 5511888888888-1234567890@g.us, Usuário: 5511999999999@c.us
+```
+
 ### Boas Práticas
 
 - ✅ Altere as senhas padrão em produção
 - ✅ Use HTTPS em produção (configure reverse proxy)
 - ✅ Mantenha a API Key segura
 - ✅ Limite os números autorizados
+- ✅ Configure apenas UM grupo autorizado (ou nenhum para bloquear todos)
 - ✅ Faça backup regular do PostgreSQL
 
 ## 📊 Monitoramento

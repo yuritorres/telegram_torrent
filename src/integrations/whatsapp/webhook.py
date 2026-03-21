@@ -4,7 +4,7 @@ Webhook Flask para receber mensagens do WhatsApp via WAHA
 import logging
 from typing import Dict, Any
 from flask import Flask, request, jsonify
-from src.integrations.whatsapp.utils import is_authorized_whatsapp, send_whatsapp, waha_client
+from src.integrations.whatsapp.utils import is_authorized_whatsapp, is_authorized_chat, send_whatsapp, waha_client
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +24,11 @@ def process_whatsapp_webhook(data: Dict[str, Any], sess=None, add_magnet_func=No
         text = message.get('body', '')
         message_type = message.get('type', 'text')
 
-        logger.info(f"Mensagem de {from_number}: {text}")
+        logger.info(f"Mensagem de {from_number} no chat {chat_id}: {text}")
 
-        if not is_authorized_whatsapp(from_number):
-            logger.warning(f"Número não autorizado: {from_number}")
-            send_whatsapp("❌ Você não tem permissão para usar este bot.", chat_id)
-            return {"status": "unauthorized"}
+        if not is_authorized_chat(chat_id, from_number):
+            logger.warning(f"Chat não autorizado - Chat: {chat_id}, Usuário: {from_number}")
+            return {"status": "unauthorized", "reason": "chat or user not authorized"}
 
         if message_type not in ['text', 'chat']:
             return {"status": "ignored", "reason": "not a text message"}

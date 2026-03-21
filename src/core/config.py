@@ -29,6 +29,7 @@ WAHA_URL = os.getenv('WAHA_URL', 'http://localhost:3000')
 WAHA_API_KEY = os.getenv('WAHA_API_KEY', 'local-dev-key-123')
 WAHA_SESSION = os.getenv('WAHA_SESSION', 'default')
 AUTHORIZED_WHATSAPP_NUMBERS = [n.strip() for n in os.getenv('AUTHORIZED_WHATSAPP_NUMBERS', '').split(',') if n.strip()]
+AUTHORIZED_WHATSAPP_GROUP = os.getenv('AUTHORIZED_WHATSAPP_GROUP', '').strip()
 WAHA_DASHBOARD_USERNAME = os.getenv('WAHA_DASHBOARD_USERNAME', 'admin')
 WAHA_DASHBOARD_PASSWORD = os.getenv('WAHA_DASHBOARD_PASSWORD', 'admin123')
 WAHA_SWAGGER_USERNAME = os.getenv('WAHA_SWAGGER_USERNAME', 'admin')
