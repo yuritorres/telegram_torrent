@@ -214,6 +214,89 @@ Depois de criar os arquivos, execute os seguintes comandos para construir e inic
 
 > **Nota**: Certifique-se de que o arquivo `.env` esteja configurado corretamente antes de iniciar os contêineres.
 
+## Atualização da Aplicação via Git
+
+Para atualizar sua aplicação na VPS e manter o código sincronizado com o repositório:
+
+### Comandos de Atualização
+
+```bash
+# 1. Entrar no diretório do projeto
+cd /root/telegram_torrent
+
+# 2. Verificar status atual (opcional)
+git status
+
+# 3. Buscar as últimas alterações do repositório
+git fetch origin
+
+# 4. Puxar as últimas alterações
+git pull origin main
+
+# 5. Reconstruir e reiniciar os containers Docker
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+
+# 6. Verificar status dos containers
+docker compose ps
+```
+
+### Comando Completo em Uma Linha
+
+```bash
+cd /root/telegram_torrent && git pull origin main && docker compose down && docker compose build --no-cache && docker compose up -d
+```
+
+### Tratamento de Conflitos
+
+Se você tiver alterações locais que entram em conflito com as atualizações:
+
+```bash
+# Opção 1: Stash (preserva suas alterações)
+git stash
+git pull origin main
+git stash pop
+
+# Opção 2: Commit suas alterações
+git add .
+git commit -m "Minhas configurações personalizadas"
+git pull origin main
+
+# Opção 3: Descartar alterações locais
+git restore .
+git pull origin main
+```
+
+### Script de Atualização Automática (Opcional)
+
+Crie um script `update.sh` para facilitar as atualizações:
+
+```bash
+#!/bin/bash
+cd /root/telegram_torrent
+echo "Atualizando código..."
+git pull origin main
+echo "Reconstruindo containers..."
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+echo "Verificando status..."
+docker compose ps
+echo "Atualização concluída!"
+```
+
+Torne executável: `chmod +x update.sh`
+
+Execute quando precisar: `./update.sh`
+
+### Observações Importantes
+
+- **Branch Principal**: Se seu branch for `master` em vez de `main`, substitua `origin main` por `origin master`
+- **Backup**: Sempre faça backup do arquivo `.env` antes de atualizações
+- **Arquitetura ARM64**: Para dispositivos como Orange Pi, Raspberry Pi, verifique se as imagens Docker são compatíveis com ARM64
+- **Logs**: Após atualizar, verifique os logs para garantir que tudo funcionou corretamente: `docker compose logs -f`
+
 ## Uso
 
 Execute o script principal:
