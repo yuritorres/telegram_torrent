@@ -38,7 +38,7 @@ def main():
     
     if QBITTORRENT_AVAILABLE:
         # Verifica se multi-instância está habilitada
-        from src.core.config import QB_MULTI_INSTANCE_ENABLED
+        from src.core.config import QB_MULTI_INSTANCE_ENABLED, QB_INSTANCES_LIST
         
         if QB_MULTI_INSTANCE_ENABLED:
             try:
@@ -47,16 +47,25 @@ def main():
                 if multi_instance_manager:
                     logger.info("Multi-instância qBittorrent inicializada com sucesso.")
                     send_telegram("✅ Multi-instância qBittorrent ativada e conectada!")
+                else:
+                    logger.warning("Multi-instância habilitada mas nenhuma instância configurada.")
             except Exception as e:
                 logger.error(f"❌ Erro ao inicializar multi-instância: {e}")
                 send_telegram(f"❌ Erro ao inicializar multi-instância: {e}")
-        else:
+        
+        # Sempre tenta inicializar sessão única (para compatibilidade e fallback)
+        if not multi_instance_manager:
             try:
                 sess = login_qb(QB_URL, QB_USER, QB_PASS)
-                logger.info("Conexão com qBittorrent estabelecida com sucesso.")
+                if sess:
+                    logger.info("Conexão com qBittorrent (instância única) estabelecida com sucesso.")
+                    if not QB_MULTI_INSTANCE_ENABLED:
+                        send_telegram("✅ Conectado ao qBittorrent!")
+                else:
+                    logger.error("Falha ao conectar ao qBittorrent.")
             except Exception as e:
                 logger.error(f"❌ Não foi possível conectar ao qBittorrent: {e}")
-                send_telegram("❌ Não foi possível se conectar ao qBittorrent. O bot continuará funcional, mas sem integração com o qBittorrent.")
+                send_telegram(f"❌ Não foi possível se conectar ao qBittorrent. O bot continuará funcional, mas sem integração com o qBittorrent.")
     else:
         logger.warning("Módulos do qBittorrent não disponíveis. O bot será executado sem integração com o qBittorrent.")
     
