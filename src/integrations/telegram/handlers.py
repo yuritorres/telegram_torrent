@@ -115,7 +115,7 @@ async def process_youtube_download(url: str, chat_id: str) -> None:
         send_telegram(f"❌ Erro inesperado: {str(e)}", chat_id, use_keyboard=True)
 
 
-def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, jellyfin_manager=None, sync_manager=None, stats_manager=None, docker_manager=None) -> int:
+def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, jellyfin_manager=None, sync_manager=None, stats_manager=None, docker_manager=None, multi_instance_manager=None) -> int:
     if not TELEGRAM_BOT_TOKEN:
         logger.error("Token do bot do Telegram não configurado")
         return last_update_id
@@ -358,6 +358,38 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     handle_remove_command(sess, qb_url, chat_id, torrent_hash, delete_files)
                     continue
 
+                elif text == "/instances":
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.multi_instance_commands import handle_instances_command
+                    handle_instances_command(chat_id)
+                    continue
+
+                elif text == "/torrents_multi":
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.multi_instance_commands import handle_torrents_multi_command
+                    handle_torrents_multi_command(chat_id)
+                    continue
+
+                elif text == "/refresh_storage":
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.multi_instance_commands import handle_refresh_storage_command
+                    handle_refresh_storage_command(chat_id)
+                    continue
+
+                elif text == "/reconnect_instances":
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.commands.multi_instance_commands import handle_reconnect_instances_command
+                    handle_reconnect_instances_command(chat_id)
+                    continue
+
                 elif text == "/docker_list":
                     if not is_authorized:
                         send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
@@ -559,11 +591,16 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                         continue
                     try:
                         send_telegram("⏳ Adicionando torrent, aguarde...", chat_id)
-                        result = add_magnet_func(sess, qb_url, magnet)
-                        if result:
-                            send_telegram("✅ Torrent adicionado com sucesso!", chat_id)
+                        
+                        if multi_instance_manager:
+                            from src.commands.multi_instance_commands import handle_add_magnet_multi
+                            handle_add_magnet_multi(magnet, chat_id)
                         else:
-                            send_telegram("❌ Falha ao adicionar o torrent.", chat_id)
+                            result = add_magnet_func(sess, qb_url, magnet)
+                            if result:
+                                send_telegram("✅ Torrent adicionado com sucesso!", chat_id)
+                            else:
+                                send_telegram("❌ Falha ao adicionar o torrent.", chat_id)
                     except Exception as e:
                         send_telegram(f"❌ Erro ao adicionar torrent: {str(e)}", chat_id)
 

@@ -13,6 +13,11 @@ from .client import (
     format_bytes,
 )
 from .monitor import monitor_torrents
+from .multi_instance_manager import (
+    MultiInstanceManager,
+    QBInstance,
+    get_manager,
+)
 
 __all__ = [
     "login_qb",
@@ -28,4 +33,7 @@ __all__ = [
     "get_transfer_info",
     "format_bytes",
     "monitor_torrents",
+    "MultiInstanceManager",
+    "QBInstance",
+    "get_manager",
 ]

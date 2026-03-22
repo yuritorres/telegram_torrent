@@ -34,13 +34,29 @@ def main():
     set_bot_commands()
     # Inicializa a sessão do qBittorrent se disponível
     sess = None
+    multi_instance_manager = None
+    
     if QBITTORRENT_AVAILABLE:
-        try:
-            sess = login_qb(QB_URL, QB_USER, QB_PASS)
-            logger.info("Conexão com qBittorrent estabelecida com sucesso.")
-        except Exception as e:
-            logger.error(f"❌ Não foi possível conectar ao qBittorrent: {e}")
-            send_telegram("❌ Não foi possível se conectar ao qBittorrent. O bot continuará funcional, mas sem integração com o qBittorrent.")
+        # Verifica se multi-instância está habilitada
+        from src.core.config import QB_MULTI_INSTANCE_ENABLED
+        
+        if QB_MULTI_INSTANCE_ENABLED:
+            try:
+                from src.commands.multi_instance_commands import initialize_multi_instance_manager
+                multi_instance_manager = initialize_multi_instance_manager()
+                if multi_instance_manager:
+                    logger.info("Multi-instância qBittorrent inicializada com sucesso.")
+                    send_telegram("✅ Multi-instância qBittorrent ativada e conectada!")
+            except Exception as e:
+                logger.error(f"❌ Erro ao inicializar multi-instância: {e}")
+                send_telegram(f"❌ Erro ao inicializar multi-instância: {e}")
+        else:
+            try:
+                sess = login_qb(QB_URL, QB_USER, QB_PASS)
+                logger.info("Conexão com qBittorrent estabelecida com sucesso.")
+            except Exception as e:
+                logger.error(f"❌ Não foi possível conectar ao qBittorrent: {e}")
+                send_telegram("❌ Não foi possível se conectar ao qBittorrent. O bot continuará funcional, mas sem integração com o qBittorrent.")
     else:
         logger.warning("Módulos do qBittorrent não disponíveis. O bot será executado sem integração com o qBittorrent.")
     
@@ -146,7 +162,7 @@ def main():
         nonlocal last_update_id, sess
         while True:
             try:
-                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager, sync_manager, stats_manager, docker_manager)
+                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager, sync_manager, stats_manager, docker_manager, multi_instance_manager)
                 time.sleep(1)
             except Exception as e:
                 print(f"Erro no processamento de mensagens: {e}")

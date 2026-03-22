@@ -3,12 +3,56 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# qBittorrent
-QB_URL = os.getenv('QB_URL', 'http://localhost:8080')
-QB_USER = os.getenv('QB_USER', 'admin')
-QB_PASS = os.getenv('QB_PASS', 'adminadmin')
+# qBittorrent - Configuração Unificada (suporta uma ou múltiplas instâncias)
+# Nomes das instâncias (separados por vírgula)
+QB_NAMES = os.getenv('QB_NAMES', 'default')
+# URLs das instâncias (separadas por vírgula)
+QB_URLS = os.getenv('QB_URLS', 'http://localhost:8080')
+# Usuários (separados por vírgula, padrão: admin)
+QB_USERS = os.getenv('QB_USERS', 'admin')
+# Senhas (separadas por vírgula, padrão: adminadmin)
+QB_PASSWORDS = os.getenv('QB_PASSWORDS', 'adminadmin')
+# Caminhos de armazenamento (separados por vírgula, padrão: /)
+QB_STORAGE_PATHS = os.getenv('QB_STORAGE_PATHS', '/')
+# Prioridades (separadas por vírgula, padrão: 0)
+QB_PRIORITIES = os.getenv('QB_PRIORITIES', '0')
+# Intervalo de verificação em segundos
 INTERVALO = int(os.getenv('INTERVALO', 30))
-QBITTORRENT_STORAGE_PATH = os.getenv('QBITTORRENT_STORAGE_PATH', '/')
+
+# Backward compatibility - mantém variáveis antigas
+QB_URL = os.getenv('QB_URL', QB_URLS.split(',')[0].strip())
+QB_USER = os.getenv('QB_USER', QB_USERS.split(',')[0].strip())
+QB_PASS = os.getenv('QB_PASS', QB_PASSWORDS.split(',')[0].strip())
+QBITTORRENT_STORAGE_PATH = os.getenv('QBITTORRENT_STORAGE_PATH', QB_STORAGE_PATHS.split(',')[0].strip())
+
+
+def parse_qb_instances():
+    """Parse qBittorrent instances from comma-separated environment variables"""
+    names = [n.strip() for n in QB_NAMES.split(',') if n.strip()]
+    urls = [u.strip() for u in QB_URLS.split(',') if u.strip()]
+    users = [u.strip() for u in QB_USERS.split(',') if u.strip()]
+    passwords = [p.strip() for p in QB_PASSWORDS.split(',') if p.strip()]
+    storage_paths = [s.strip() for s in QB_STORAGE_PATHS.split(',') if s.strip()]
+    priorities = [p.strip() for p in QB_PRIORITIES.split(',') if p.strip()]
+    
+    instances = []
+    for i in range(len(urls)):
+        instance = {
+            'name': names[i] if i < len(names) else f'instance-{i+1}',
+            'url': urls[i],
+            'username': users[i] if i < len(users) else 'admin',
+            'password': passwords[i] if i < len(passwords) else 'adminadmin',
+            'storage_path': storage_paths[i] if i < len(storage_paths) else '/',
+            'priority': int(priorities[i]) if i < len(priorities) and priorities[i].isdigit() else 0,
+        }
+        instances.append(instance)
+    
+    return instances
+
+
+QB_INSTANCES_LIST = parse_qb_instances()
+# Multi-instance habilitado se houver mais de uma URL configurada
+QB_MULTI_INSTANCE_ENABLED = len(QB_INSTANCES_LIST) > 1
 
 # Telegram
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
