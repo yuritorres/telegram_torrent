@@ -35,6 +35,14 @@ def set_bot_commands() -> None:
         {"command": "docker_restart", "description": "Reiniciar container Docker"},
         {"command": "docker_stats", "description": "Estatísticas de container"},
         {"command": "docker_logs", "description": "Ver logs de container"},
+        {"command": "rede", "description": "Buscar filmes no Rede Torrent"},
+        {"command": "rede_series", "description": "Buscar séries no Rede Torrent"},
+        {"command": "rede_desenhos", "description": "Buscar desenhos no Rede Torrent"},
+        {"command": "rede_baixar", "description": "Baixar item da busca Rede Torrent"},
+        {"command": "rede_generos", "description": "Gêneros de filmes Rede Torrent"},
+        {"command": "rede_lancamentos", "description": "Lançamentos Rede Torrent"},
+        {"command": "rede_dublados", "description": "Dublados Rede Torrent"},
+        {"command": "rede_legendados", "description": "Legendados Rede Torrent"},
     ]
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setMyCommands"
     try:

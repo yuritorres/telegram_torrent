@@ -207,6 +207,10 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     "🎬 Buscar Filmes": "/ytsbr",
                     "📺 Buscar Séries": "/ytsbr_series",
                     "🎌 Buscar Animes": "/ytsbr_anime",
+                    "🌐 Rede Filmes": "/rede",
+                    "📺 Rede Séries": "/rede_series",
+                    "🎨 Rede Desenhos": "/rede_desenhos",
+                    "🆕 Rede Lançamentos": "/rede_lancamentos",
                     "❓ Ajuda": "/start",
                 }
                 text = keyboard_command_map.get(text, text)
@@ -578,6 +582,152 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                         handle_ytsbr_popular("anime", chat_id, user_id)
                     else:
                         handle_ytsbr_search(parts[1], "anime", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_baixar"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_download_by_number
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        send_telegram("❌ Use: `/rede_baixar [número]`\nExemplo: `/rede_baixar 1`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    else:
+                        try:
+                            number = int(parts[1])
+                            handle_redetorrent_download_by_number(number, user_id, chat_id, add_magnet_func, sess, qb_url)
+                        except ValueError:
+                            send_telegram("❌ Número inválido. Use apenas números.\n\n*Exemplo:* `/rede_baixar 1`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    continue
+
+                elif text.startswith("/rede_generos"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_genres
+                    handle_redetorrent_genres("movie", chat_id)
+                    continue
+
+                elif text.startswith("/rede_genero"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_by_genre
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        send_telegram("❌ Use: `/rede_genero [nome do gênero]`\nExemplo: `/rede_genero acao`\n\nPara ver gêneros disponíveis: `/rede_generos`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    else:
+                        handle_redetorrent_by_genre(parts[1], "movie", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_series_generos"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_genres
+                    handle_redetorrent_genres("series", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_series_genero"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_by_genre
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        send_telegram("❌ Use: `/rede_series_genero [nome do gênero]`\nExemplo: `/rede_series_genero drama`\n\nPara ver gêneros disponíveis: `/rede_series_generos`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    else:
+                        handle_redetorrent_by_genre(parts[1], "series", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_desenhos_generos"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_genres
+                    handle_redetorrent_genres("desenho", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_desenhos_genero"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_by_genre
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        send_telegram("❌ Use: `/rede_desenhos_genero [nome do gênero]`\nExemplo: `/rede_desenhos_genero anime`\n\nPara ver gêneros disponíveis: `/rede_desenhos_generos`", chat_id, parse_mode="Markdown", use_keyboard=True)
+                    else:
+                        handle_redetorrent_by_genre(parts[1], "desenho", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_series"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_search, handle_redetorrent_popular
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        handle_redetorrent_popular("series", chat_id, user_id)
+                    else:
+                        handle_redetorrent_search(parts[1], "series", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_desenhos"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_search, handle_redetorrent_popular
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        handle_redetorrent_popular("desenho", chat_id, user_id)
+                    else:
+                        handle_redetorrent_search(parts[1], "desenho", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_dublados"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_popular
+                    handle_redetorrent_popular("dublado", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_legendados"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_popular
+                    handle_redetorrent_popular("legendado", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede_lancamentos"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_popular
+                    handle_redetorrent_popular("lancamento", chat_id, user_id)
+                    continue
+
+                elif text.startswith("/rede"):
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para usar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_search, handle_redetorrent_popular
+                    parts = text.split(maxsplit=1)
+                    if len(parts) == 1:
+                        handle_redetorrent_popular("movie", chat_id, user_id)
+                    else:
+                        handle_redetorrent_search(parts[1], "all", chat_id, user_id)
+                    continue
+
+                elif "redetorrent.com/" in text:
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para baixar torrents.", chat_id, use_keyboard=True)
+                        continue
+                    from src.integrations.redetorrent.commands import handle_redetorrent_details
+                    url_match = re.search(r'https?://redetorrent\.com/[^\s]+', text)
+                    if url_match:
+                        handle_redetorrent_details(url_match.group(0), chat_id, add_magnet_func, sess, qb_url)
                     continue
 
                 elif "ytsbr.com/" in text and any(x in text for x in ["/filme/", "/serie/", "/anime/"]):
