@@ -230,12 +230,15 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     continue
 
                 elif text == "/qespaco":
+                    logger.debug(f"Comando /qespaco - multi_instance_manager: {multi_instance_manager}, sess: {sess}")
                     if multi_instance_manager:
                         # Modo multi-instância: mostrar espaço de todas as instâncias
+                        logger.info("Usando modo multi-instância para /qespaco")
                         from src.commands.multi_instance_commands import handle_instances_command
                         handle_instances_command(chat_id)
                     else:
                         # Modo instância única
+                        logger.info("Usando modo instância única para /qespaco")
                         disk_info = get_disk_space_info(sess, qb_url, chat_id)
                         send_telegram(disk_info, chat_id, parse_mode="HTML", use_keyboard=True)
                     continue
@@ -245,12 +248,15 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                         send_telegram("Você não tem permissão para executar este comando.", chat_id)
                         continue
                     
+                    logger.debug(f"Comando /qtorrents - multi_instance_manager: {multi_instance_manager}, sess: {sess}")
                     if multi_instance_manager:
                         # Modo multi-instância: listar torrents de todas as instâncias
+                        logger.info("Usando modo multi-instância para /qtorrents")
                         from src.commands.multi_instance_commands import handle_torrents_multi_command
                         handle_torrents_multi_command(chat_id)
                     else:
                         # Modo instância única
+                        logger.info("Usando modo instância única para /qtorrents")
                         list_torrents(sess, qb_url, chat_id)
                     continue
 
@@ -596,25 +602,43 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                         send_telegram(f"❌ Erro ao processar o vídeo do YouTube: {str(e)}", chat_id, use_keyboard=True)
                     continue
 
-                magnet_regex = r'magnet:\?xt=urn:btih:[0-9a-fA-F]{40}.*'
-                magnets = re.findall(magnet_regex, text, re.IGNORECASE)
-                for magnet in magnets:
+                # Usar parser de magnet links melhorado
+                from src.utils.magnet_parser import extract_magnet_links, format_magnet_info
+                
+                magnet_links = extract_magnet_links(text)
+                
+                for magnet_obj in magnet_links:
                     if not is_authorized:
                         send_telegram("❌ Você não tem permissão para adicionar torrents.", chat_id)
                         continue
+                    
                     try:
-                        send_telegram("⏳ Adicionando torrent, aguarde...", chat_id)
+                        # Mostrar informações do torrent antes de adicionar
+                        info_msg = format_magnet_info(magnet_obj)
+                        send_telegram(
+                            f"{info_msg}\n\n⏳ Adicionando torrent, aguarde...",
+                            chat_id,
+                            parse_mode="HTML"
+                        )
                         
                         if multi_instance_manager:
                             from src.commands.multi_instance_commands import handle_add_magnet_multi
-                            handle_add_magnet_multi(magnet, chat_id)
+                            # Passar tamanho estimado para seleção inteligente de instância
+                            estimated_size = magnet_obj.size if magnet_obj.size else 0
+                            handle_add_magnet_multi(magnet_obj.raw_link, chat_id)
                         else:
-                            result = add_magnet_func(sess, qb_url, magnet)
+                            result = add_magnet_func(sess, qb_url, magnet_obj.raw_link)
                             if result:
-                                send_telegram("✅ Torrent adicionado com sucesso!", chat_id)
+                                send_telegram(
+                                    f"✅ <b>Torrent adicionado com sucesso!</b>\n\n"
+                                    f"📝 {magnet_obj.get_display_name()}",
+                                    chat_id,
+                                    parse_mode="HTML"
+                                )
                             else:
                                 send_telegram("❌ Falha ao adicionar o torrent.", chat_id)
                     except Exception as e:
+                        logger.error(f"Erro ao adicionar magnet link: {e}")
                         send_telegram(f"❌ Erro ao adicionar torrent: {str(e)}", chat_id)
 
             except Exception as e:
@@ -626,12 +650,6 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro na requisição para a API do Telegram: {e}")
-    except Exception as e:
-        logger.error(f"Erro inesperado em process_messages: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-
-    return last_update_id
     except Exception as e:
         logger.error(f"Erro inesperado em process_messages: {e}")
         import traceback

@@ -198,23 +198,39 @@ class MultiInstanceManager:
             if not self.instances:
                 return "Nenhuma instância configurada."
             
+            # Separar instâncias ativas e inativas
+            active_instances = [inst for inst in self.instances.values() if inst.is_active]
+            inactive_instances = [inst for inst in self.instances.values() if not inst.is_active]
+            
             lines = ["📊 **Instâncias qBittorrent:**\n"]
-            for instance in sorted(self.instances.values(), key=lambda x: x.name):
-                status = "✅ Ativa" if instance.is_active else "❌ Inativa"
-                space_info = ""
-                if instance.is_active and instance.available_space > 0:
-                    space_info = (
-                        f"\n   💾 Espaço: {self._format_bytes(instance.available_space)} livres / "
-                        f"{self._format_bytes(instance.total_space)} total"
+            
+            # Avisar se há instâncias indisponíveis
+            if inactive_instances:
+                lines.append("⚠️ **Atenção:** Algumas instâncias estão indisponíveis:\n")
+                for instance in sorted(inactive_instances, key=lambda x: x.name):
+                    lines.append(f"   ❌ **{instance.name}** - {instance.url}")
+                lines.append("")
+            
+            # Mostrar instâncias ativas
+            if not active_instances:
+                lines.append("❌ Nenhuma instância disponível no momento.")
+            else:
+                lines.append("✅ **Instâncias Disponíveis:**\n")
+                for instance in sorted(active_instances, key=lambda x: x.name):
+                    space_info = ""
+                    if instance.available_space > 0:
+                        space_info = (
+                            f"\n   💾 Espaço: {self._format_bytes(instance.available_space)} livres / "
+                            f"{self._format_bytes(instance.total_space)} total"
+                        )
+                    priority_info = f"\n   ⭐ Prioridade: {instance.priority}" if instance.priority > 0 else ""
+                    
+                    lines.append(
+                        f"• **{instance.name}**\n"
+                        f"   🔗 {instance.url}"
+                        f"{space_info}"
+                        f"{priority_info}\n"
                     )
-                priority_info = f"\n   ⭐ Prioridade: {instance.priority}" if instance.priority > 0 else ""
-                
-                lines.append(
-                    f"• **{instance.name}** ({status})\n"
-                    f"   🔗 {instance.url}"
-                    f"{space_info}"
-                    f"{priority_info}\n"
-                )
             
             return "\n".join(lines)
     

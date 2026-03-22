@@ -102,13 +102,32 @@ def handle_torrents_multi_command(chat_id: int):
             return
         
         manager = get_manager()
-        all_torrents = manager.get_all_torrents()
+        all_instances = manager.get_all_instances()
         
-        if not all_torrents:
+        # Verificar instâncias inativas
+        inactive_instances = [inst for inst in all_instances if not inst.is_active]
+        active_instances = [inst for inst in all_instances if inst.is_active]
+        
+        response_lines = ["📊 <b>Torrents por Instância:</b>\n"]
+        
+        # Avisar sobre instâncias indisponíveis
+        if inactive_instances:
+            response_lines.append("⚠️ <b>Atenção:</b> Instâncias indisponíveis:\n")
+            for inst in inactive_instances:
+                response_lines.append(f"   ❌ <b>{inst.name}</b> - {inst.url}")
+            response_lines.append("")
+        
+        # Verificar se há instâncias ativas
+        if not active_instances:
             send_telegram("📭 Nenhuma instância ativa encontrada.", chat_id, use_keyboard=True)
             return
         
-        response_lines = ["📊 <b>Torrents por Instância:</b>\n"]
+        all_torrents = manager.get_all_torrents()
+        
+        if not all_torrents:
+            response_lines.append("� Nenhum torrent encontrado nas instâncias ativas.")
+            send_telegram("\n".join(response_lines), chat_id, parse_mode="HTML", use_keyboard=True)
+            return
         
         for instance_name, torrents in all_torrents.items():
             response_lines.append(f"\n🖥️ <b>{instance_name}</b>")
