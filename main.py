@@ -104,10 +104,14 @@ def main():
     
     # Inicializa o gerenciador de estatísticas (v0.0.1.7-alpha)
     stats_manager = None
-    if sess:
+    if sess or multi_instance_manager:
         try:
             from src.services import StatisticsManager
-            stats_manager = StatisticsManager(sess, QB_URL)
+            stats_manager = StatisticsManager(
+                qb_session=sess,
+                qb_url=QB_URL,
+                multi_instance_manager=multi_instance_manager
+            )
             logger.info("StatisticsManager inicializado com sucesso")
         except Exception as e:
             logger.error(f"Erro ao inicializar StatisticsManager: {e}")

@@ -11,9 +11,12 @@ logger = logging.getLogger(__name__)
 class StatisticsManager:
     """Gerenciador de estatísticas de downloads e uso de banda"""
 
-    def __init__(self, qb_session, qb_url: str, data_file: str = "stats_data.json"):
+    def __init__(self, qb_session=None, qb_url: str = None, data_file: str = "stats_data.json", multi_instance_manager=None):
+        # Sessão/URL de instância única (modo legado)
         self.qb_session = qb_session
         self.qb_url = qb_url
+        # Gerenciador multi-instância (quando habilitado)
+        self.multi_instance_manager = multi_instance_manager
         self.data_file = data_file
 
         self.bandwidth_history: List[Dict] = []
@@ -46,18 +49,51 @@ class StatisticsManager:
         except Exception as e:
             logger.error(f"Erro ao salvar dados históricos: {e}")
 
+    def _get_instances(self):
+        """Retorna lista de tuplas (session, url, name) para coleta de stats."""
+        if self.multi_instance_manager:
+            # Considera apenas instâncias ativas e com sessão
+            return [
+                (inst.session, inst.url, inst.name)
+                for inst in self.multi_instance_manager.instances.values()
+                if inst.session and inst.is_active
+            ]
+        if self.qb_session and self.qb_url:
+            return [(self.qb_session, self.qb_url, "default")]
+        return []
+
     def record_bandwidth(self):
         from src.integrations.qbittorrent.client import get_transfer_info
         try:
-            transfer_info = get_transfer_info(self.qb_session, self.qb_url)
-            if not transfer_info:
+            instances = self._get_instances()
+            if not instances:
                 return
+
+            total_dl_speed = 0
+            total_up_speed = 0
+            total_dl_data = 0
+            total_up_data = 0
+            collected = 0
+
+            for session, url, name in instances:
+                transfer_info = get_transfer_info(session, url)
+                if not transfer_info:
+                    continue
+                total_dl_speed += transfer_info.get('dl_info_speed', 0)
+                total_up_speed += transfer_info.get('up_info_speed', 0)
+                total_dl_data += transfer_info.get('dl_info_data', 0)
+                total_up_data += transfer_info.get('up_info_data', 0)
+                collected += 1
+
+            if collected == 0:
+                return
+
             record = {
                 'timestamp': datetime.now().isoformat(),
-                'dl_speed': transfer_info.get('dl_info_speed', 0),
-                'up_speed': transfer_info.get('up_info_speed', 0),
-                'dl_data': transfer_info.get('dl_info_data', 0),
-                'up_data': transfer_info.get('up_info_data', 0),
+                'dl_speed': total_dl_speed,
+                'up_speed': total_up_speed,
+                'dl_data': total_dl_data,
+                'up_data': total_up_data,
             }
             self.bandwidth_history.append(record)
             max_records = 10000
@@ -115,14 +151,24 @@ class StatisticsManager:
     def get_activity_summary(self) -> Dict:
         try:
             from src.integrations.qbittorrent.client import get_transfer_info
-            transfer_info = get_transfer_info(self.qb_session, self.qb_url)
+            instances = self._get_instances()
+
+            current_dl = 0
+            current_up = 0
+            for session, url, _ in instances:
+                transfer_info = get_transfer_info(session, url)
+                if not transfer_info:
+                    continue
+                current_dl += transfer_info.get('dl_info_speed', 0)
+                current_up += transfer_info.get('up_info_speed', 0)
+
             stats_24h = self.get_bandwidth_stats(24)
             stats_7d = self.get_bandwidth_stats(24 * 7)
             recent_downloads = self.get_download_history(7)
             return {
                 'current': {
-                    'dl_speed': transfer_info.get('dl_info_speed', 0) if transfer_info else 0,
-                    'up_speed': transfer_info.get('up_info_speed', 0) if transfer_info else 0,
+                    'dl_speed': current_dl,
+                    'up_speed': current_up,
                 },
                 'last_24h': stats_24h,
                 'last_7d': stats_7d,
