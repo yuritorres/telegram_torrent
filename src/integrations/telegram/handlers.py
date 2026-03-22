@@ -230,15 +230,28 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     continue
 
                 elif text == "/qespaco":
-                    disk_info = get_disk_space_info(sess, qb_url, chat_id)
-                    send_telegram(disk_info, chat_id, parse_mode="HTML", use_keyboard=True)
+                    if multi_instance_manager:
+                        # Modo multi-instância: mostrar espaço de todas as instâncias
+                        from src.commands.multi_instance_commands import handle_instances_command
+                        handle_instances_command(chat_id)
+                    else:
+                        # Modo instância única
+                        disk_info = get_disk_space_info(sess, qb_url, chat_id)
+                        send_telegram(disk_info, chat_id, parse_mode="HTML", use_keyboard=True)
                     continue
 
                 elif text == "/qtorrents":
                     if not is_authorized:
                         send_telegram("Você não tem permissão para executar este comando.", chat_id)
                         continue
-                    list_torrents(sess, qb_url, chat_id)
+                    
+                    if multi_instance_manager:
+                        # Modo multi-instância: listar torrents de todas as instâncias
+                        from src.commands.multi_instance_commands import handle_torrents_multi_command
+                        handle_torrents_multi_command(chat_id)
+                    else:
+                        # Modo instância única
+                        list_torrents(sess, qb_url, chat_id)
                     continue
 
                 elif text == "/recent" and jellyfin_manager:
@@ -613,6 +626,12 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro na requisição para a API do Telegram: {e}")
+    except Exception as e:
+        logger.error(f"Erro inesperado em process_messages: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+    return last_update_id
     except Exception as e:
         logger.error(f"Erro inesperado em process_messages: {e}")
         import traceback
