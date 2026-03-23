@@ -68,7 +68,7 @@ const Window = ({ title, children, onClose, onFocus, zIndex = 0 }) => {
             {isMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
           <button
-            onClick={onClose}
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="hover:bg-red-500 p-1 rounded transition-colors"
           >
             <X size={16} />
