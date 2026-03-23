@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react'
-import { X, Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward } from 'lucide-react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
+import { X, Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Subtitles, Languages, Settings } from 'lucide-react'
+import axios from 'axios'
 
 const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
   const videoRef = useRef(null)
@@ -14,24 +15,73 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
   const [error, setError] = useState(null)
   const hideTimer = useRef(null)
 
-  const streamUrl = `/api/jellyfin/stream/${itemId}`
+  const [audioTracks, setAudioTracks] = useState([])
+  const [subtitleTracks, setSubtitleTracks] = useState([])
+  const [mediaSourceId, setMediaSourceId] = useState(null)
+  const [selectedAudio, setSelectedAudio] = useState(null)
+  const [selectedSubtitle, setSelectedSubtitle] = useState(-1)
+  const [showSettingsMenu, setShowSettingsMenu] = useState(null)
+
+  const buildStreamUrl = useCallback((audioIdx) => {
+    let url = `/api/jellyfin/stream/${itemId}`
+    if (audioIdx !== null && audioIdx !== undefined) {
+      url += `?audioStreamIndex=${audioIdx}`
+    }
+    return url
+  }, [itemId])
+
+  useEffect(() => {
+    const fetchPlaybackInfo = async () => {
+      try {
+        const resp = await axios.get(`/api/jellyfin/playback-info/${itemId}`)
+        const sources = resp.data?.MediaSources || []
+        if (sources.length > 0) {
+          const source = sources[0]
+          setMediaSourceId(source.Id)
+          const streams = source.MediaStreams || []
+          const audio = streams.filter(s => s.Type === 'Audio').map(s => ({
+            index: s.Index,
+            label: s.DisplayTitle || s.Language || `Audio ${s.Index}`,
+            language: s.Language || '',
+            codec: s.Codec || '',
+            isDefault: s.IsDefault || false,
+          }))
+          const subs = streams.filter(s => s.Type === 'Subtitle').map(s => ({
+            index: s.Index,
+            label: s.DisplayTitle || s.Language || `Legenda ${s.Index}`,
+            language: s.Language || '',
+            codec: s.Codec || '',
+            isExternal: s.IsExternal || false,
+            isDefault: s.IsDefault || false,
+          }))
+          setAudioTracks(audio)
+          setSubtitleTracks(subs)
+          const defaultAudio = audio.find(a => a.isDefault)
+          if (defaultAudio) setSelectedAudio(defaultAudio.index)
+          else if (audio.length > 0) setSelectedAudio(audio[0].index)
+        }
+      } catch (err) {
+        console.error('Failed to fetch playback info:', err)
+      }
+    }
+    setIsLoading(true)
+    setError(null)
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
+    setAudioTracks([])
+    setSubtitleTracks([])
+    setMediaSourceId(null)
+    setSelectedSubtitle(-1)
+    setShowSettingsMenu(null)
+    fetchPlaybackInfo()
+  }, [itemId])
 
   useEffect(() => {
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current)
     }
   }, [])
-
-  useEffect(() => {
-    setIsLoading(true)
-    setError(null)
-    setIsPlaying(false)
-    setCurrentTime(0)
-    setDuration(0)
-    if (videoRef.current) {
-      videoRef.current.load()
-    }
-  }, [itemId])
 
   const handlePlay = () => {
     if (videoRef.current) {
@@ -94,8 +144,43 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
     setShowControls(true)
     if (hideTimer.current) clearTimeout(hideTimer.current)
     hideTimer.current = setTimeout(() => {
-      if (isPlaying) setShowControls(false)
+      if (isPlaying) {
+        setShowControls(false)
+        setShowSettingsMenu(null)
+      }
     }, 3000)
+  }
+
+  const handleAudioChange = (audioIndex) => {
+    setSelectedAudio(audioIndex)
+    setShowSettingsMenu(null)
+    if (videoRef.current) {
+      const savedTime = videoRef.current.currentTime
+      const wasPlaying = !videoRef.current.paused
+      videoRef.current.src = buildStreamUrl(audioIndex)
+      videoRef.current.currentTime = savedTime
+      if (wasPlaying) videoRef.current.play().catch(() => {})
+    }
+  }
+
+  const handleSubtitleChange = (subIndex) => {
+    setSelectedSubtitle(subIndex)
+    setShowSettingsMenu(null)
+    if (videoRef.current) {
+      const tracks = videoRef.current.textTracks
+      for (let i = 0; i < tracks.length; i++) {
+        tracks[i].mode = 'disabled'
+      }
+      if (subIndex >= 0) {
+        const trackElements = videoRef.current.querySelectorAll('track')
+        for (let i = 0; i < trackElements.length; i++) {
+          if (parseInt(trackElements[i].dataset.subIndex) === subIndex) {
+            tracks[i].mode = 'showing'
+            break
+          }
+        }
+      }
+    }
   }
 
   const formatTime = (seconds) => {
@@ -108,12 +193,14 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
   }
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
+  const streamUrl = buildStreamUrl(selectedAudio)
 
   return (
     <div
       ref={containerRef}
       className="relative w-full h-full bg-black flex flex-col"
       onMouseMove={handleMouseMove}
+      onClick={() => setShowSettingsMenu(null)}
     >
       {/* Close button */}
       <button
@@ -129,14 +216,14 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
       </div>
 
       {/* Video */}
-      <div className="flex-1 flex items-center justify-center cursor-pointer" onClick={handlePlay}>
+      <div className="flex-1 flex items-center justify-center cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePlay(); }}>
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center z-30">
+          <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
             <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
           </div>
         )}
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center z-30">
+          <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
             <div className="text-center text-white">
               <p className="text-lg font-semibold mb-2">Erro ao reproduzir</p>
               <p className="text-sm text-white/70">{error}</p>
@@ -147,6 +234,7 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
           ref={videoRef}
           className="w-full h-full object-contain"
           src={streamUrl}
+          crossOrigin="anonymous"
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onPlay={() => setIsPlaying(true)}
@@ -155,11 +243,26 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
           onCanPlay={() => setIsLoading(false)}
           onWaiting={() => setIsLoading(true)}
           autoPlay
-        />
+        >
+          {mediaSourceId && subtitleTracks.map((sub) => (
+            <track
+              key={sub.index}
+              kind="subtitles"
+              label={sub.label}
+              srcLang={sub.language || 'und'}
+              src={`/api/jellyfin/subtitles/${itemId}/${mediaSourceId}/${sub.index}`}
+              data-sub-index={sub.index}
+              default={sub.isDefault}
+            />
+          ))}
+        </video>
       </div>
 
       {/* Controls overlay */}
-      <div className={`absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+      <div
+        className={`absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Progress bar */}
         <div
           className="w-full h-1.5 bg-white/20 rounded-full cursor-pointer mb-3 group hover:h-2.5 transition-all"
@@ -194,6 +297,74 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Audio track selector */}
+            {audioTracks.length > 1 && (
+              <div className="relative">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowSettingsMenu(showSettingsMenu === 'audio' ? null : 'audio') }}
+                  className={`text-white hover:text-purple-400 transition-colors ${showSettingsMenu === 'audio' ? 'text-purple-400' : ''}`}
+                  title="Audio"
+                >
+                  <Languages size={20} />
+                </button>
+                {showSettingsMenu === 'audio' && (
+                  <div className="absolute bottom-10 right-0 bg-black/95 rounded-lg border border-white/10 py-2 min-w-[200px] max-h-60 overflow-y-auto">
+                    <div className="px-3 py-1.5 text-xs text-white/50 font-semibold uppercase">Audio</div>
+                    {audioTracks.map((track) => (
+                      <button
+                        key={track.index}
+                        onClick={() => handleAudioChange(track.index)}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
+                          selectedAudio === track.index ? 'text-purple-400' : 'text-white'
+                        }`}
+                      >
+                        <span className="block">{track.label}</span>
+                        {track.codec && <span className="text-xs text-white/40">{track.codec.toUpperCase()}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Subtitle selector */}
+            {subtitleTracks.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowSettingsMenu(showSettingsMenu === 'subs' ? null : 'subs') }}
+                  className={`text-white hover:text-purple-400 transition-colors ${showSettingsMenu === 'subs' || selectedSubtitle >= 0 ? 'text-purple-400' : ''}`}
+                  title="Legendas"
+                >
+                  <Subtitles size={20} />
+                </button>
+                {showSettingsMenu === 'subs' && (
+                  <div className="absolute bottom-10 right-0 bg-black/95 rounded-lg border border-white/10 py-2 min-w-[200px] max-h-60 overflow-y-auto">
+                    <div className="px-3 py-1.5 text-xs text-white/50 font-semibold uppercase">Legendas</div>
+                    <button
+                      onClick={() => handleSubtitleChange(-1)}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
+                        selectedSubtitle === -1 ? 'text-purple-400' : 'text-white'
+                      }`}
+                    >
+                      Desativadas
+                    </button>
+                    {subtitleTracks.map((track) => (
+                      <button
+                        key={track.index}
+                        onClick={() => handleSubtitleChange(track.index)}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
+                          selectedSubtitle === track.index ? 'text-purple-400' : 'text-white'
+                        }`}
+                      >
+                        <span className="block">{track.label}</span>
+                        {track.codec && <span className="text-xs text-white/40">{track.codec.toUpperCase()}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <button onClick={toggleMute} className="text-white hover:text-purple-400 transition-colors">
               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </button>

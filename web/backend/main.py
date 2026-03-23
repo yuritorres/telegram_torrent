@@ -169,7 +169,7 @@ class JellyfinHelper:
         params = {
             'Limit': limit,
             'Recursive': True,
-            'IncludeItemTypes': 'Movie,Series,Episode',
+            'IncludeItemTypes': 'Movie,Series',
             'SortBy': 'DateCreated',
             'SortOrder': 'Descending',
         }
@@ -230,9 +230,33 @@ class JellyfinHelper:
             logger.error(f"Jellyfin get episodes error: {e}")
             return []
 
-    def get_stream_url(self, item_id: str) -> str:
+    def get_playback_info(self, item_id: str) -> Optional[Dict]:
+        if not self._available:
+            return None
+        try:
+            params = {}
+            if self.user_id:
+                params['userId'] = self.user_id
+            resp = self.session.get(
+                f"{self.url}/Items/{item_id}/PlaybackInfo",
+                headers=self._headers(), params=params, timeout=30,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error(f"Jellyfin playback info error: {e}")
+            return None
+
+    def get_stream_url(self, item_id: str, audio_stream_index: int = None) -> str:
         token = self.api_key or self.access_token or ''
-        return f"{self.url}/Videos/{item_id}/stream?static=true&api_key={token}"
+        url = f"{self.url}/Videos/{item_id}/stream?static=true&api_key={token}"
+        if audio_stream_index is not None:
+            url += f"&audioStreamIndex={audio_stream_index}"
+        return url
+
+    def get_subtitle_url(self, item_id: str, media_source_id: str, index: int) -> str:
+        token = self.api_key or self.access_token or ''
+        return f"{self.url}/Videos/{item_id}/{media_source_id}/Subtitles/{index}/0/Stream.vtt?api_key={token}"
 
     def get_image_url(self, item_id: str, image_type: str = 'Primary', max_width: int = 300) -> str:
         token = self.api_key or self.access_token or ''
@@ -565,12 +589,41 @@ async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int 
         raise HTTPException(status_code=502, detail=str(e))
 
 
-@app.get("/api/jellyfin/stream/{item_id}")
-async def stream_jellyfin(item_id: str, request: Request):
+@app.get("/api/jellyfin/playback-info/{item_id}")
+async def get_jellyfin_playback_info(item_id: str):
+    if not app_state.jellyfin or not app_state.jellyfin.is_available():
+        raise HTTPException(status_code=503, detail="Jellyfin not available")
+    info = app_state.jellyfin.get_playback_info(item_id)
+    if info:
+        return info
+    raise HTTPException(status_code=404, detail="Playback info not found")
+
+
+@app.get("/api/jellyfin/subtitles/{item_id}/{media_source_id}/{index}")
+async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
-    stream_url = jf.get_stream_url(item_id)
+    sub_url = jf.get_subtitle_url(item_id, media_source_id, index)
+    try:
+        resp = req_lib.get(sub_url, stream=True, timeout=30)
+        resp.raise_for_status()
+        return StreamingResponse(
+            resp.iter_content(chunk_size=65536),
+            media_type='text/vtt',
+            headers={'Content-Disposition': f'inline; filename="subtitle_{index}.vtt"'},
+        )
+    except Exception as e:
+        logger.error(f"Jellyfin subtitle error: {e}")
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.get("/api/jellyfin/stream/{item_id}")
+async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None):
+    if not app_state.jellyfin or not app_state.jellyfin.is_available():
+        raise HTTPException(status_code=503, detail="Jellyfin not available")
+    jf = app_state.jellyfin
+    stream_url = jf.get_stream_url(item_id, audio_stream_index=audioStreamIndex)
     headers = {}
     if 'range' in request.headers:
         headers['Range'] = request.headers['range']
