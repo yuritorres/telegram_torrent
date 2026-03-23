@@ -286,13 +286,20 @@ class DockerHelper:
             return []
         try:
             containers = self.client.containers.list(all=True)
-            return [{
-                'id': c.short_id,
-                'name': c.name,
-                'status': c.status,
-                'image': c.image.tags[0] if c.image.tags else 'unknown',
-                'created': c.attrs['Created'],
-            } for c in containers]
+            result = []
+            for c in containers:
+                labels = c.labels or {}
+                stack = labels.get('com.docker.compose.project', None)
+                
+                result.append({
+                    'id': c.short_id,
+                    'name': c.name,
+                    'status': c.status,
+                    'image': c.image.tags[0] if c.image.tags else 'unknown',
+                    'created': c.attrs['Created'],
+                    'stack': stack,
+                })
+            return result
         except Exception as e:
             logger.error(f"Docker list error: {e}")
             return []
