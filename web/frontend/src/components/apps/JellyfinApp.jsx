@@ -185,7 +185,7 @@ const JellyfinApp = () => {
                     src={`/api/jellyfin/image/${season.Id}?type=Primary&maxWidth=120`}
                     alt={season.Name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = ''; e.target.className = 'hidden' }}
+                    onError={(e) => { e.target.onerror = null; e.target.style.display = 'none' }}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -212,7 +212,7 @@ const JellyfinApp = () => {
                     src={`/api/jellyfin/image/${episode.Id}?type=Primary&maxWidth=200`}
                     alt={episode.Name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = ''; e.target.className = 'hidden' }}
+                    onError={(e) => { e.target.onerror = null; e.target.style.display = 'none' }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Play size={24} className="text-white" />
@@ -267,12 +267,12 @@ const JellyfinApp = () => {
             >
               <div className="relative aspect-video bg-background">
                 <img
-                  src={`/api/jellyfin/image/${item.Id}?type=${item.Type === 'Movie' ? 'Backdrop' : 'Primary'}&maxWidth=400`}
+                  src={`/api/jellyfin/image/${item.Id}?type=${item.ImageTags?.Primary ? 'Primary' : 'Backdrop'}&maxWidth=400`}
                   alt={item.Name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.onerror = null
-                    e.target.src = `/api/jellyfin/image/${item.Id}?type=Primary&maxWidth=400`
+                    e.target.style.display = 'none'
                   }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">

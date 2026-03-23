@@ -580,11 +580,15 @@ async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int 
     image_url = jf.get_image_url(item_id, type, maxWidth)
     try:
         resp = req_lib.get(image_url, stream=True, timeout=30)
+        if resp.status_code == 404:
+            raise HTTPException(status_code=404, detail="Image not found")
         resp.raise_for_status()
         return StreamingResponse(
             resp.iter_content(chunk_size=65536),
             media_type=resp.headers.get('Content-Type', 'image/jpeg'),
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
