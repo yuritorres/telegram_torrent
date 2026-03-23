@@ -7,8 +7,9 @@ Self-contained: no imports from the main project's src package.
 import os
 import requests as req_lib
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 import asyncio
 import logging
@@ -180,6 +181,62 @@ class JellyfinHelper:
         except Exception as e:
             logger.error(f"Jellyfin recent items error: {e}")
             return []
+
+    def get_item(self, item_id: str) -> Optional[Dict]:
+        if not self._available:
+            return None
+        try:
+            endpoint = f"/Users/{self.user_id}/Items/{item_id}" if self.user_id else f"/Items/{item_id}"
+            resp = self.session.get(f"{self.url}{endpoint}", headers=self._headers(), timeout=30)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error(f"Jellyfin get item error: {e}")
+            return None
+
+    def get_seasons(self, series_id: str) -> List[Dict]:
+        if not self._available:
+            return []
+        try:
+            params = {}
+            if self.user_id:
+                params['userId'] = self.user_id
+            resp = self.session.get(
+                f"{self.url}/Shows/{series_id}/Seasons",
+                headers=self._headers(), params=params, timeout=30,
+            )
+            resp.raise_for_status()
+            return resp.json().get('Items', [])
+        except Exception as e:
+            logger.error(f"Jellyfin get seasons error: {e}")
+            return []
+
+    def get_episodes(self, series_id: str, season_id: str = None) -> List[Dict]:
+        if not self._available:
+            return []
+        try:
+            params = {'Recursive': True}
+            if self.user_id:
+                params['userId'] = self.user_id
+            if season_id:
+                params['seasonId'] = season_id
+            resp = self.session.get(
+                f"{self.url}/Shows/{series_id}/Episodes",
+                headers=self._headers(), params=params, timeout=30,
+            )
+            resp.raise_for_status()
+            return resp.json().get('Items', [])
+        except Exception as e:
+            logger.error(f"Jellyfin get episodes error: {e}")
+            return []
+
+    def get_stream_url(self, item_id: str) -> str:
+        token = self.api_key or self.access_token or ''
+        return f"{self.url}/Videos/{item_id}/stream?static=true&api_key={token}"
+
+    def get_image_url(self, item_id: str, image_type: str = 'Primary', max_width: int = 300) -> str:
+        token = self.api_key or self.access_token or ''
+        return f"{self.url}/Items/{item_id}/Images/{image_type}?maxWidth={max_width}&api_key={token}"
 
 # ---------------------------------------------------------------------------
 # Lightweight Docker helpers
@@ -465,6 +522,73 @@ async def get_jellyfin_recent(limit: int = 10):
     if app_state.jellyfin and app_state.jellyfin.is_available():
         return {"items": app_state.jellyfin.get_recent_items(limit=limit)}
     raise HTTPException(status_code=503, detail="Jellyfin not available")
+
+
+@app.get("/api/jellyfin/items/{item_id}")
+async def get_jellyfin_item(item_id: str):
+    if app_state.jellyfin and app_state.jellyfin.is_available():
+        item = app_state.jellyfin.get_item(item_id)
+        if item:
+            return item
+        raise HTTPException(status_code=404, detail="Item not found")
+    raise HTTPException(status_code=503, detail="Jellyfin not available")
+
+
+@app.get("/api/jellyfin/shows/{series_id}/seasons")
+async def get_jellyfin_seasons(series_id: str):
+    if app_state.jellyfin and app_state.jellyfin.is_available():
+        return {"items": app_state.jellyfin.get_seasons(series_id)}
+    raise HTTPException(status_code=503, detail="Jellyfin not available")
+
+
+@app.get("/api/jellyfin/shows/{series_id}/episodes")
+async def get_jellyfin_episodes(series_id: str, season_id: str = None):
+    if app_state.jellyfin and app_state.jellyfin.is_available():
+        return {"items": app_state.jellyfin.get_episodes(series_id, season_id)}
+    raise HTTPException(status_code=503, detail="Jellyfin not available")
+
+
+@app.get("/api/jellyfin/image/{item_id}")
+async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int = 300):
+    if not app_state.jellyfin or not app_state.jellyfin.is_available():
+        raise HTTPException(status_code=503, detail="Jellyfin not available")
+    jf = app_state.jellyfin
+    image_url = jf.get_image_url(item_id, type, maxWidth)
+    try:
+        resp = req_lib.get(image_url, stream=True, timeout=30)
+        resp.raise_for_status()
+        return StreamingResponse(
+            resp.iter_content(chunk_size=65536),
+            media_type=resp.headers.get('Content-Type', 'image/jpeg'),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.get("/api/jellyfin/stream/{item_id}")
+async def stream_jellyfin(item_id: str, request: Request):
+    if not app_state.jellyfin or not app_state.jellyfin.is_available():
+        raise HTTPException(status_code=503, detail="Jellyfin not available")
+    jf = app_state.jellyfin
+    stream_url = jf.get_stream_url(item_id)
+    headers = {}
+    if 'range' in request.headers:
+        headers['Range'] = request.headers['range']
+    try:
+        resp = req_lib.get(stream_url, headers=headers, stream=True, timeout=60)
+        resp.raise_for_status()
+        response_headers = {}
+        for key in ['Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges']:
+            if key in resp.headers:
+                response_headers[key] = resp.headers[key]
+        return StreamingResponse(
+            resp.iter_content(chunk_size=1024 * 1024),
+            status_code=resp.status_code,
+            headers=response_headers,
+        )
+    except Exception as e:
+        logger.error(f"Jellyfin stream error: {e}")
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @app.get("/api/docker/containers")
