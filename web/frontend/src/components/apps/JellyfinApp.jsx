@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useSystem } from '../../context/SystemContext'
-import { Film, Tv, Music, RefreshCw, Play, ArrowLeft, ChevronRight } from 'lucide-react'
+import { Film, Tv, Music, RefreshCw, Play, ArrowLeft, ChevronRight, Search, Filter, X } from 'lucide-react'
 import axios from 'axios'
 import MediaPlayer from './MediaPlayer'
+import { getContinueWatching, getItemProgress } from '../../utils/watchProgress'
 
 const JellyfinApp = () => {
   const { jellyfinItems, fetchJellyfinRecent } = useSystem()
@@ -16,6 +17,71 @@ const JellyfinApp = () => {
   const [episodeList, setEpisodeList] = useState([])
   const [playingIndex, setPlayingIndex] = useState(-1)
   const [loading, setLoading] = useState(false)
+  
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterType, setFilterType] = useState('all')
+  const [filterGenre, setFilterGenre] = useState('all')
+  const [sortBy, setSortBy] = useState('recent')
+  const [continueWatching, setContinueWatching] = useState([])
+
+  useEffect(() => {
+    const updateContinueWatching = () => {
+      const watching = getContinueWatching(10)
+      const enriched = watching.map(w => {
+        const item = jellyfinItems.find(i => i.Id === w.itemId)
+        return item ? { ...item, progress: w } : null
+      }).filter(Boolean)
+      setContinueWatching(enriched)
+    }
+    updateContinueWatching()
+    const interval = setInterval(updateContinueWatching, 5000)
+    return () => clearInterval(interval)
+  }, [jellyfinItems])
+
+  const allGenres = useMemo(() => {
+    const genres = new Set()
+    jellyfinItems.forEach(item => {
+      if (item.Genres) {
+        item.Genres.forEach(g => genres.add(g))
+      }
+    })
+    return Array.from(genres).sort()
+  }, [jellyfinItems])
+
+  const filteredAndSortedItems = useMemo(() => {
+    let items = [...jellyfinItems]
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      items = items.filter(item =>
+        item.Name?.toLowerCase().includes(query) ||
+        item.Overview?.toLowerCase().includes(query) ||
+        item.Genres?.some(g => g.toLowerCase().includes(query))
+      )
+    }
+    
+    if (filterType !== 'all') {
+      items = items.filter(item => item.Type === filterType)
+    }
+    
+    if (filterGenre !== 'all') {
+      items = items.filter(item => item.Genres?.includes(filterGenre))
+    }
+    
+    items.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return (a.Name || '').localeCompare(b.Name || '')
+        case 'year':
+          return (b.ProductionYear || 0) - (a.ProductionYear || 0)
+        case 'recent':
+        default:
+          return (b.DateCreated || '').localeCompare(a.DateCreated || '')
+      }
+    })
+    
+    return items
+  }, [jellyfinItems, searchQuery, filterType, filterGenre, sortBy])
 
   const getMediaIcon = (type) => {
     switch (type?.toLowerCase()) {
@@ -253,13 +319,137 @@ const JellyfinApp = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {jellyfinItems.length === 0 ? (
-          <div className="col-span-full text-center py-8 text-muted-foreground">
-            Nenhum item recente encontrado
+      {/* Search and Filters */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+          <input
+            type="text"
+            placeholder="Buscar por título, gênero..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 bg-secondary rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-3 py-1.5 bg-secondary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="all">Todos os tipos</option>
+            <option value="Movie">Filmes</option>
+            <option value="Series">Séries</option>
+          </select>
+
+          <select
+            value={filterGenre}
+            onChange={(e) => setFilterGenre(e.target.value)}
+            className="px-3 py-1.5 bg-secondary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="all">Todos os gêneros</option>
+            {allGenres.map(genre => (
+              <option key={genre} value={genre}>{genre}</option>
+            ))}
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-1.5 bg-secondary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="recent">Mais recentes</option>
+            <option value="name">Nome (A-Z)</option>
+            <option value="year">Ano</option>
+          </select>
+
+          {(searchQuery || filterType !== 'all' || filterGenre !== 'all' || sortBy !== 'recent') && (
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setFilterType('all')
+                setFilterGenre('all')
+                setSortBy('recent')
+              }}
+              className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 rounded-lg text-sm transition-colors flex items-center gap-1"
+            >
+              <X size={16} />
+              Limpar filtros
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Continue Watching */}
+      {continueWatching.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold">Continue Assistindo</h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {continueWatching.map((item) => {
+              const progressPercent = (item.progress.position / item.progress.duration) * 100
+              return (
+                <button
+                  key={item.Id}
+                  onClick={() => handleItemClick(item)}
+                  className="bg-secondary rounded-lg overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all text-left group"
+                >
+                  <div className="relative aspect-video bg-background">
+                    <img
+                      src={`/api/jellyfin/image/${item.Id}?type=${item.ImageTags?.Primary ? 'Primary' : 'Backdrop'}&maxWidth=400`}
+                      alt={item.Name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null
+                        e.target.style.display = 'none'
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-purple-500 p-3 rounded-full">
+                        <Play size={24} className="text-white" />
+                      </div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+                      <div className="h-full bg-purple-500" style={{ width: `${progressPercent}%` }} />
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    <h4 className="font-semibold text-sm truncate">{item.Name}</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {Math.floor(item.progress.position / 60)}:{String(Math.floor(item.progress.position % 60)).padStart(2, '0')} / {Math.floor(item.progress.duration / 60)}:{String(Math.floor(item.progress.duration % 60)).padStart(2, '0')}
+                    </p>
+                  </div>
+                </button>
+              )
+            })}
           </div>
-        ) : (
-          jellyfinItems.map((item, index) => (
+        </div>
+      )}
+
+      {/* All Items */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold">
+          {searchQuery || filterType !== 'all' || filterGenre !== 'all' ? 'Resultados' : 'Biblioteca'}
+          <span className="text-sm text-muted-foreground ml-2">({filteredAndSortedItems.length})</span>
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredAndSortedItems.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-muted-foreground">
+              {searchQuery ? 'Nenhum resultado encontrado' : 'Nenhum item recente encontrado'}
+            </div>
+          ) : (
+            filteredAndSortedItems.map((item, index) => {
+              const itemProgress = getItemProgress(item.Id)
+              const progressPercent = itemProgress ? (itemProgress.position / itemProgress.duration) * 100 : 0
+              return (
             <button
               key={index}
               onClick={() => handleItemClick(item)}
@@ -285,6 +475,11 @@ const JellyfinApp = () => {
                     {item.Type === 'Movie' ? 'Filme' : item.Type === 'Series' ? 'Serie' : item.Type}
                   </span>
                 </div>
+                {progressPercent > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+                    <div className="h-full bg-purple-500" style={{ width: `${progressPercent}%` }} />
+                  </div>
+                )}
               </div>
               <div className="p-3">
                 <h3 className="font-semibold truncate">{item.Name}</h3>
@@ -299,8 +494,10 @@ const JellyfinApp = () => {
                 </div>
               </div>
             </button>
-          ))
-        )}
+              )
+            })
+          )}
+        </div>
       </div>
     </div>
   )

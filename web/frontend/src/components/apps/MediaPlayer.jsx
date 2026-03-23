@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { X, Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Subtitles, Languages, Settings } from 'lucide-react'
 import axios from 'axios'
+import { saveWatchProgress, getItemProgress, removeItemProgress } from '../../utils/watchProgress'
 
 const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
   const videoRef = useRef(null)
@@ -95,7 +96,20 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime)
+      const time = videoRef.current.currentTime
+      setCurrentTime(time)
+      
+      if (duration > 0 && time > 5) {
+        saveWatchProgress(itemId, {
+          position: time,
+          duration: duration,
+          title: title,
+        })
+      }
+      
+      if (duration > 0 && time >= duration * 0.95) {
+        removeItemProgress(itemId)
+      }
     }
   }
 
@@ -103,6 +117,11 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
     if (videoRef.current) {
       setDuration(videoRef.current.duration)
       setIsLoading(false)
+      
+      const savedProgress = getItemProgress(itemId)
+      if (savedProgress && savedProgress.position > 5) {
+        videoRef.current.currentTime = savedProgress.position
+      }
     }
   }
 
