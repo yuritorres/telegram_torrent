@@ -1,0 +1,39 @@
+{
+  "id": "qbittorrent",
+  "name": "qBittorrent",
+  "tagline": "Free and reliable P2P BitTorrent client",
+  "description": "qBittorrent is a cross-platform free and open-source BitTorrent client. qBittorrent is a native application written in C++. It uses Boost, Qt 6 toolkit and libtorrent-rasterbar library.",
+  "category": "download",
+  "author": "CasaOS Team",
+  "developer": "qBittorrent",
+  "icon": "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/qBittorrent/icon.png",
+  "screenshots": [
+    "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/qBittorrent/screenshot-1.png",
+    "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/qBittorrent/screenshot-2.png"
+  ],
+  "version": "4.6.2",
+  "architectures": ["amd64", "arm64"],
+  "port": 8080,
+  "featured": true,
+  "compose": {
+    "name": "qbittorrent",
+    "services": {
+      "qbittorrent": {
+        "image": "linuxserver/qbittorrent:4.6.2",
+        "container_name": "qbittorrent",
+        "environment": {
+          "PUID": "$PUID",
+          "PGID": "$PGID",
+          "TZ": "$TZ",
+          "WEBUI_PORT": "8080"
+        },
+        "volumes": [
+          "/DATA/AppData/$AppID/config:/config",
+          "/DATA/Downloads:/downloads"
+        ],
+        "ports": ["8080:8080", "6881:6881", "6881:6881/udp"],
+        "restart": "unless-stopped"
+      }
+    }
+  }
+}

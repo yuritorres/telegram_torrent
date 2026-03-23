@@ -4,12 +4,20 @@ import TorrentsApp from './apps/TorrentsApp'
 import JellyfinApp from './apps/JellyfinApp'
 import DockerApp from './apps/DockerApp'
 import SystemMonitor from './apps/SystemMonitor'
-import { Download, Film, Container, Activity } from 'lucide-react'
+import AppStoreApp from './apps/AppStoreApp'
+import { Download, Film, Container, Activity, Store } from 'lucide-react'
 
 const Desktop = () => {
   const [openWindows, setOpenWindows] = useState([])
 
   const apps = [
+    {
+      id: 'appstore',
+      name: 'App Store',
+      icon: Store,
+      component: AppStoreApp,
+      color: 'bg-gradient-to-br from-purple-500 to-pink-500'
+    },
     {
       id: 'torrents',
       name: 'Gerenciador de Torrents',

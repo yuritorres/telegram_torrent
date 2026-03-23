@@ -1,0 +1,50 @@
+[
+  {
+    "id": "media",
+    "name": "Media",
+    "icon": "🎬",
+    "description": "Media servers and streaming applications"
+  },
+  {
+    "id": "download",
+    "name": "Download",
+    "icon": "⬇️",
+    "description": "Download managers and torrent clients"
+  },
+  {
+    "id": "productivity",
+    "name": "Productivity",
+    "icon": "📝",
+    "description": "Productivity and collaboration tools"
+  },
+  {
+    "id": "automation",
+    "name": "Automation",
+    "icon": "🤖",
+    "description": "Automation and workflow tools"
+  },
+  {
+    "id": "monitoring",
+    "name": "Monitoring",
+    "icon": "📊",
+    "description": "System monitoring and analytics"
+  },
+  {
+    "id": "network",
+    "name": "Network",
+    "icon": "🌐",
+    "description": "Network tools and services"
+  },
+  {
+    "id": "database",
+    "name": "Database",
+    "icon": "💾",
+    "description": "Database management systems"
+  },
+  {
+    "id": "development",
+    "name": "Development",
+    "icon": "💻",
+    "description": "Development tools and environments"
+  }
+]

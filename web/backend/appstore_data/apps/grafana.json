@@ -1,0 +1,35 @@
+{
+  "id": "grafana",
+  "name": "Grafana",
+  "tagline": "The open observability platform",
+  "description": "Grafana allows you to query, visualize, alert on and understand your metrics no matter where they are stored. Create, explore, and share dashboards with your team and foster a data driven culture.",
+  "category": "monitoring",
+  "author": "CasaOS Team",
+  "developer": "Grafana Labs",
+  "icon": "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Grafana/icon.png",
+  "screenshots": [
+    "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Grafana/screenshot-1.png"
+  ],
+  "version": "10.2.3",
+  "architectures": ["amd64", "arm64"],
+  "port": 3000,
+  "featured": false,
+  "compose": {
+    "name": "grafana",
+    "services": {
+      "grafana": {
+        "image": "grafana/grafana:10.2.3",
+        "container_name": "grafana",
+        "environment": {
+          "GF_SECURITY_ADMIN_USER": "admin",
+          "GF_SECURITY_ADMIN_PASSWORD": "admin"
+        },
+        "volumes": [
+          "/DATA/AppData/$AppID/data:/var/lib/grafana"
+        ],
+        "ports": ["3000:3000"],
+        "restart": "unless-stopped"
+      }
+    }
+  }
+}

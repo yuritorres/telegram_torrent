@@ -1,0 +1,40 @@
+{
+  "id": "jellyfin",
+  "name": "Jellyfin",
+  "tagline": "The Free Software Media System",
+  "description": "Jellyfin is the volunteer-built media solution that puts you in control of your media. Stream to any device from your own server, with no strings attached. Your media, your server, your way.",
+  "category": "media",
+  "author": "Jellyfin Team",
+  "developer": "Jellyfin",
+  "icon": "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Jellyfin/icon.png",
+  "screenshots": [
+    "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Jellyfin/screenshot-1.png",
+    "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Jellyfin/screenshot-2.png",
+    "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Jellyfin/screenshot-3.png"
+  ],
+  "thumbnail": "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Jellyfin/thumbnail.jpg",
+  "version": "10.8.13",
+  "architectures": ["amd64", "arm64", "arm"],
+  "port": 8096,
+  "featured": true,
+  "compose": {
+    "name": "jellyfin",
+    "services": {
+      "jellyfin": {
+        "image": "jellyfin/jellyfin:10.8.13",
+        "container_name": "jellyfin",
+        "environment": {
+          "PUID": "$PUID",
+          "PGID": "$PGID",
+          "TZ": "$TZ"
+        },
+        "volumes": [
+          "/DATA/AppData/$AppID/config:/config",
+          "/DATA/Media:/media"
+        ],
+        "ports": ["8096:8096"],
+        "restart": "unless-stopped"
+      }
+    }
+  }
+}

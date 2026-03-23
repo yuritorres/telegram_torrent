@@ -5,6 +5,8 @@ FastAPI-based REST API with WebSocket support
 Self-contained: no imports from the main project's src package.
 """
 import os
+import json
+import yaml
 import requests as req_lib
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
@@ -15,6 +17,7 @@ import asyncio
 import logging
 from typing import List, Optional, Dict
 from datetime import datetime
+from pathlib import Path
 
 load_dotenv()
 
@@ -677,6 +680,174 @@ async def stop_container(container_name: str):
         return {"success": ok, "message": msg}
     raise HTTPException(status_code=503, detail="Docker not available")
 
+
+# ---------------------------------------------------------------------------
+# AppStore Helper
+# ---------------------------------------------------------------------------
+
+class AppStoreHelper:
+    def __init__(self):
+        self.base_path = Path(__file__).parent / "appstore_data"
+        self.apps_path = self.base_path / "apps"
+        self.categories_file = self.base_path / "category-list.json"
+        
+    def get_categories(self) -> List[Dict]:
+        try:
+            if self.categories_file.exists():
+                with open(self.categories_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return []
+        except Exception as e:
+            logger.error(f"Error loading categories: {e}")
+            return []
+    
+    def get_all_apps(self) -> List[Dict]:
+        apps = []
+        try:
+            if not self.apps_path.exists():
+                return []
+            
+            for app_file in self.apps_path.glob("*.json"):
+                with open(app_file, 'r', encoding='utf-8') as f:
+                    app_data = json.load(f)
+                    apps.append(app_data)
+            
+            return sorted(apps, key=lambda x: x.get('name', ''))
+        except Exception as e:
+            logger.error(f"Error loading apps: {e}")
+            return []
+    
+    def get_app_by_id(self, app_id: str) -> Optional[Dict]:
+        try:
+            app_file = self.apps_path / f"{app_id}.json"
+            if app_file.exists():
+                with open(app_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return None
+        except Exception as e:
+            logger.error(f"Error loading app {app_id}: {e}")
+            return None
+    
+    def get_featured_apps(self) -> List[Dict]:
+        all_apps = self.get_all_apps()
+        return [app for app in all_apps if app.get('featured', False)]
+    
+    def get_apps_by_category(self, category: str) -> List[Dict]:
+        all_apps = self.get_all_apps()
+        return [app for app in all_apps if app.get('category') == category]
+    
+    def install_app(self, app_id: str, docker_helper) -> tuple[bool, str]:
+        try:
+            app = self.get_app_by_id(app_id)
+            if not app:
+                return False, f"App {app_id} not found"
+            
+            if not docker_helper or not docker_helper.is_available():
+                return False, "Docker not available"
+            
+            compose_data = app.get('compose', {})
+            if not compose_data:
+                return False, "No compose configuration found"
+            
+            # Create docker-compose.yml in temp location
+            compose_dir = Path(f"/tmp/appstore_{app_id}")
+            compose_dir.mkdir(parents=True, exist_ok=True)
+            compose_file = compose_dir / "docker-compose.yml"
+            
+            # Replace variables
+            compose_str = yaml.dump(compose_data)
+            compose_str = compose_str.replace('$AppID', app_id)
+            compose_str = compose_str.replace('$PUID', '1000')
+            compose_str = compose_str.replace('$PGID', '1000')
+            compose_str = compose_str.replace('$TZ', 'UTC')
+            
+            with open(compose_file, 'w') as f:
+                f.write(compose_str)
+            
+            # Use docker-compose to deploy
+            import subprocess
+            result = subprocess.run(
+                ['docker-compose', '-f', str(compose_file), 'up', '-d'],
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                return True, f"App {app['name']} installed successfully"
+            else:
+                return False, f"Installation failed: {result.stderr}"
+                
+        except Exception as e:
+            logger.error(f"Error installing app {app_id}: {e}")
+            return False, str(e)
+
+# ---------------------------------------------------------------------------
+# AppStore Routes
+# ---------------------------------------------------------------------------
+
+@app.get("/api/appstore/categories")
+async def get_appstore_categories():
+    appstore = AppStoreHelper()
+    return {"categories": appstore.get_categories()}
+
+@app.get("/api/appstore/apps")
+async def get_appstore_apps(category: Optional[str] = None, featured: Optional[bool] = None):
+    appstore = AppStoreHelper()
+    
+    if featured:
+        apps = appstore.get_featured_apps()
+    elif category:
+        apps = appstore.get_apps_by_category(category)
+    else:
+        apps = appstore.get_all_apps()
+    
+    return {"apps": apps}
+
+@app.get("/api/appstore/apps/{app_id}")
+async def get_appstore_app(app_id: str):
+    appstore = AppStoreHelper()
+    app = appstore.get_app_by_id(app_id)
+    
+    if not app:
+        raise HTTPException(status_code=404, detail="App not found")
+    
+    return app
+
+@app.post("/api/appstore/apps/{app_id}/install")
+async def install_appstore_app(app_id: str):
+    appstore = AppStoreHelper()
+    success, message = appstore.install_app(app_id, app_state.docker)
+    
+    if success:
+        return {"success": True, "message": message}
+    else:
+        raise HTTPException(status_code=500, detail=message)
+
+@app.post("/api/appstore/apps/{app_id}/uninstall")
+async def uninstall_appstore_app(app_id: str):
+    if not app_state.docker or not app_state.docker.is_available():
+        raise HTTPException(status_code=503, detail="Docker not available")
+    
+    try:
+        # Stop and remove containers with the app name
+        import subprocess
+        result = subprocess.run(
+            ['docker-compose', '-p', app_id, 'down'],
+            capture_output=True,
+            text=True,
+            cwd=f"/tmp/appstore_{app_id}"
+        )
+        
+        if result.returncode == 0:
+            return {"success": True, "message": f"App {app_id} uninstalled"}
+        else:
+            raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
+# WebSocket
+# ---------------------------------------------------------------------------
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

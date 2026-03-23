@@ -1,0 +1,33 @@
+{
+  "id": "portainer",
+  "name": "Portainer",
+  "tagline": "Docker and Kubernetes Management",
+  "description": "Portainer is a lightweight management UI which allows you to easily manage your Docker and Kubernetes environments. It is designed to be as simple to deploy as it is to use.",
+  "category": "development",
+  "author": "CasaOS Team",
+  "developer": "Portainer",
+  "icon": "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Portainer/icon.png",
+  "screenshots": [
+    "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Portainer/screenshot-1.png",
+    "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/Apps/Portainer/screenshot-2.png"
+  ],
+  "version": "2.19.4",
+  "architectures": ["amd64", "arm64"],
+  "port": 9000,
+  "featured": false,
+  "compose": {
+    "name": "portainer",
+    "services": {
+      "portainer": {
+        "image": "portainer/portainer-ce:2.19.4",
+        "container_name": "portainer",
+        "volumes": [
+          "/DATA/AppData/$AppID/data:/data",
+          "/var/run/docker.sock:/var/run/docker.sock"
+        ],
+        "ports": ["9000:9000"],
+        "restart": "unless-stopped"
+      }
+    }
+  }
+}
