@@ -595,7 +595,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     else:
                         try:
                             number = int(parts[1])
-                            handle_redetorrent_download_by_number(number, user_id, chat_id, add_magnet_func, sess, qb_url)
+                            handle_redetorrent_download_by_number(number, user_id, chat_id, add_magnet_func, sess, qb_url, multi_instance_manager)
                         except ValueError:
                             send_telegram("❌ Número inválido. Use apenas números.\n\n*Exemplo:* `/rede_baixar 1`", chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
@@ -727,7 +727,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     from src.integrations.redetorrent.commands import handle_redetorrent_details
                     url_match = re.search(r'https?://redetorrent\.com/[^\s]+', text)
                     if url_match:
-                        handle_redetorrent_details(url_match.group(0), chat_id, add_magnet_func, sess, qb_url)
+                        handle_redetorrent_details(url_match.group(0), chat_id, add_magnet_func, sess, qb_url, multi_instance_manager)
                     continue
 
                 elif "ytsbr.com/" in text and any(x in text for x in ["/filme/", "/serie/", "/anime/"]):

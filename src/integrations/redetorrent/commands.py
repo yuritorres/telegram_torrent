@@ -78,7 +78,7 @@ def handle_redetorrent_search(query: str, media_type: str, chat_id: str, user_id
         send_telegram(f"❌ Erro ao buscar: {str(e)}", chat_id, use_keyboard=True)
 
 
-def handle_redetorrent_details(url: str, chat_id: str, add_magnet_func, sess, qb_url: str):
+def handle_redetorrent_details(url: str, chat_id: str, add_magnet_func, sess, qb_url: str, multi_instance_manager=None):
     try:
         send_telegram("🔍 Obtendo informações...", chat_id, use_keyboard=True)
         api = RedeTorrentApi()
@@ -115,11 +115,18 @@ def handle_redetorrent_details(url: str, chat_id: str, add_magnet_func, sess, qb
             send_telegram(versions_msg, chat_id, parse_mode="Markdown", use_keyboard=True)
 
         send_telegram("⏳ Adicionando torrent ao qBittorrent...", chat_id, use_keyboard=True)
-        result = add_magnet_func(sess, qb_url, magnet)
-        if result:
-            send_telegram(f"✅ *{title}* adicionado com sucesso ao qBittorrent!", chat_id, parse_mode="Markdown", use_keyboard=True)
+
+        if multi_instance_manager:
+            from src.commands.multi_instance_commands import handle_add_magnet_multi
+            result = handle_add_magnet_multi(magnet, chat_id)
+            if not result:
+                send_telegram(f"🔗 Link magnet:\n`{magnet}`", chat_id, parse_mode="Markdown", use_keyboard=True)
         else:
-            send_telegram(f"❌ Falha ao adicionar torrent.\n\n🔗 Link magnet:\n`{magnet}`", chat_id, parse_mode="Markdown", use_keyboard=True)
+            result = add_magnet_func(sess, qb_url, magnet)
+            if result:
+                send_telegram(f"✅ *{title}* adicionado com sucesso ao qBittorrent!", chat_id, parse_mode="Markdown", use_keyboard=True)
+            else:
+                send_telegram(f"❌ Falha ao adicionar torrent.\n\n🔗 Link magnet:\n`{magnet}`", chat_id, parse_mode="Markdown", use_keyboard=True)
     except Exception as e:
         logger.error(f"Erro ao processar item do Rede Torrent: {e}")
         send_telegram(f"❌ Erro ao processar: {str(e)}", chat_id, use_keyboard=True)
@@ -203,7 +210,7 @@ def handle_redetorrent_by_genre(genre: str, media_type: str, chat_id: str, user_
         send_telegram(f"❌ Erro ao buscar por gênero: {str(e)}", chat_id, use_keyboard=True)
 
 
-def handle_redetorrent_download_by_number(number: int, user_id: str, chat_id: str, add_magnet_func, sess, qb_url: str):
+def handle_redetorrent_download_by_number(number: int, user_id: str, chat_id: str, add_magnet_func, sess, qb_url: str, multi_instance_manager=None):
     try:
         if user_id not in _user_search_cache:
             send_telegram(
@@ -220,7 +227,7 @@ def handle_redetorrent_download_by_number(number: int, user_id: str, chat_id: st
         if not url:
             send_telegram("❌ URL não encontrada para este item", chat_id, use_keyboard=True)
             return
-        handle_redetorrent_details(url, chat_id, add_magnet_func, sess, qb_url)
+        handle_redetorrent_details(url, chat_id, add_magnet_func, sess, qb_url, multi_instance_manager)
     except ValueError:
         send_telegram("❌ Número inválido. Use apenas números.\n\n*Exemplo:* `/rede_baixar 1`", chat_id, parse_mode="Markdown", use_keyboard=True)
     except Exception as e:
