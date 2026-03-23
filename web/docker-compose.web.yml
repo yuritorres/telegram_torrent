@@ -1,0 +1,37 @@
+services:
+  web-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: torrentos-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=America/Sao_Paulo
+    env_file:
+      - ../.env
+    networks:
+      - torrentos-network
+
+  web-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: torrentos-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    environment:
+      - TZ=America/Sao_Paulo
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - torrentos-network
+    depends_on:
+      - web-backend
+
+networks:
+  torrentos-network:
+    driver: bridge
