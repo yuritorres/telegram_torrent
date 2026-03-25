@@ -24,7 +24,9 @@ export const SystemProvider = ({ children }) => {
     fetchJellyfinRecent()
     fetchDockerContainers()
 
-    const websocket = new WebSocket('ws://localhost:8000/ws')
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/ws`
+    const websocket = new WebSocket(wsUrl)
     
     websocket.onopen = () => {
       console.log('WebSocket connected')
