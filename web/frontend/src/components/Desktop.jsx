@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import Window from './Window'
+import Dock from './Dock'
 import TorrentsApp from './apps/TorrentsApp'
 import JellyfinApp from './apps/JellyfinApp'
 import DockerApp from './apps/DockerApp'
@@ -67,21 +68,6 @@ const Desktop = () => {
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-4 p-4">
-        {apps.map(app => (
-          <button
-            key={app.id}
-            onClick={() => openApp(app)}
-            className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/10 transition-colors group"
-          >
-            <div className={`${app.color} p-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
-              <app.icon className="w-8 h-8 text-white" />
-            </div>
-            <span className="text-sm font-medium text-white">{app.name}</span>
-          </button>
-        ))}
-      </div>
-
       {openWindows.map(window => (
         <Window
           key={window.id}
@@ -93,6 +79,12 @@ const Desktop = () => {
           <window.component />
         </Window>
       ))}
+      
+      <Dock 
+        apps={apps}
+        openWindows={openWindows}
+        onOpenApp={openApp}
+      />
     </>
   )
 }
