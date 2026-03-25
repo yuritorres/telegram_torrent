@@ -24,34 +24,42 @@ const DockIcon = ({ app, onOpen, isOpen, index, mouseX, setMouseX }) => {
 
   return (
     <div
-      ref={iconRef}
-      className="relative flex flex-col items-center transition-all duration-200 ease-out"
+      className="flex flex-col items-center justify-end"
       style={{
-        transform: `scale(${scale}) translateY(${-10 * (scale - 1)}px)`,
-        transformOrigin: 'bottom center',
-        zIndex: scale > 1 ? 10 : 1,
-        margin: '0 4px'
+        width: '64px',
+        height: '80px',
+        flexShrink: 0
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      <button
-        onClick={() => onOpen(app)}
-        className={`relative group ${app.color} p-3 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-2xl`}
-        style={{ width: '56px', height: '56px' }}
+      <div
+        ref={iconRef}
+        className="relative flex flex-col items-center transition-all duration-200 ease-out"
+        style={{
+          transform: `scale(${scale}) translateY(${-10 * (scale - 1)}px)`,
+          transformOrigin: 'bottom center',
+          zIndex: scale > 1 ? 10 : 1
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        <app.icon className="w-full h-full text-white" />
+        <button
+          onClick={() => onOpen(app)}
+          className={`relative group ${app.color} p-3 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-2xl`}
+          style={{ width: '56px', height: '56px' }}
+        >
+          <app.icon className="w-full h-full text-white" />
         
         {isOpen && (
           <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
         )}
       </button>
       
-      {isHovered && (
-        <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900/90 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap backdrop-blur-sm border border-white/10">
-          {app.name}
-        </div>
-      )}
+        {isHovered && (
+          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900/90 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap backdrop-blur-sm border border-white/10">
+            {app.name}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -90,7 +98,7 @@ const Dock = ({ apps, openWindows, onOpenApp }) => {
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
         }}
       >
-        <div className="flex items-end gap-2 px-2">
+        <div className="flex items-end gap-1 px-2">
           {apps.map((app, index) => (
             <DockIcon
               key={app.id}
@@ -105,16 +113,22 @@ const Dock = ({ apps, openWindows, onOpenApp }) => {
           
           <div className="w-px h-12 bg-white/20 mx-1" />
           
-          <div className="relative group">
-            <div className="bg-gray-800/80 p-3 rounded-2xl shadow-lg flex items-center justify-center" style={{ width: '56px', height: '56px' }}>
-              <div className="text-white text-xs font-medium text-center leading-tight">
-                <div>{time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
-                <div className="text-[10px] opacity-70">{time.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</div>
+          <div className="relative group flex flex-col items-center justify-end" style={{ width: '64px', height: '80px', flexShrink: 0 }}>
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden" style={{ width: '56px', height: '56px' }}>
+              <div className="h-full flex flex-col items-center justify-center px-1">
+                <div className="text-[10px] font-semibold text-red-500 uppercase tracking-wide">
+                  {time.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                </div>
+                <div className="text-[28px] font-light text-gray-900 leading-none -mt-0.5">
+                  {time.getDate()}
+                </div>
               </div>
             </div>
             
             <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900/90 text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap backdrop-blur-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-              {time.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              <br />
+              {time.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
           </div>
           
