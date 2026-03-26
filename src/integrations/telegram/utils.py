@@ -19,7 +19,7 @@ def get_recent_items_detailed(jellyfin_manager, limit: int = 10) -> str:
     if not jellyfin_manager or not jellyfin_manager.is_available():
         return "❌ Jellyfin não configurado ou indisponível."
     try:
-        items = jellyfin_manager.client.get_recently_added(limit)
+        items = jellyfin_manager.get_recently_added(limit)
         if not items:
             return "📥 Nenhum item recente encontrado."
 
@@ -28,6 +28,7 @@ def get_recent_items_detailed(jellyfin_manager, limit: int = 10) -> str:
             name = item.get('Name', 'Sem título')
             item_type = item.get('Type', 'Desconhecido')
             year = item.get('ProductionYear', '')
+            jellyfin_url = item.get('_jellyfin_url', '')
             genres = item.get('Genres', [])
             genres_text = ', '.join(genres[:3]) if genres else 'N/A'
             rating = item.get('CommunityRating')
@@ -43,17 +44,33 @@ def get_recent_items_detailed(jellyfin_manager, limit: int = 10) -> str:
             overview = item.get('Overview', '')
             if overview and len(overview) > 150:
                 overview = overview[:150] + "..."
-            web_link = jellyfin_manager.client.get_web_link(item['Id'])
+            
+            # Busca o cliente correto para gerar o link
+            web_link = ''
+            if jellyfin_url:
+                for client in jellyfin_manager.clients:
+                    if client.url == jellyfin_url:
+                        web_link = client.get_web_link(item['Id'])
+                        break
+            elif jellyfin_manager.client:
+                web_link = jellyfin_manager.client.get_web_link(item['Id'])
+            
             item_msg = f"**{i}. {name}**"
             if year:
                 item_msg += f" ({year})"
             item_msg += f"\n📺 Tipo: {item_type}"
+            
+            # Adiciona informação do servidor se houver múltiplas contas
+            if jellyfin_manager.multi_account_enabled and jellyfin_url:
+                item_msg += f"\n🌐 Servidor: {jellyfin_url}"
+            
             item_msg += f"\n{rating_text}"
             item_msg += f"\n🎭 Gêneros: {genres_text}"
             item_msg += f"\n📅 Adicionado: {date_text}"
             if overview:
                 item_msg += f"\n\n_{overview}_"
-            item_msg += f"\n🔗 [Ver no Jellyfin]({web_link})"
+            if web_link:
+                item_msg += f"\n🔗 [Ver no Jellyfin]({web_link})"
             messages.append(item_msg)
 
         return "\n\n".join(messages)

@@ -60,13 +60,42 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 AUTHORIZED_USERS = [uid.strip() for uid in os.getenv('AUTHORIZED_USERS', '').split(',') if uid.strip()]
 EXPIRAR_MSG = int(os.getenv('EXPIRAR_MSG', 30))
 
-# Jellyfin
-JELLYFIN_URL = os.getenv('JELLYFIN_URL')
-JELLYFIN_USERNAME = os.getenv('JELLYFIN_USERNAME')
-JELLYFIN_PASSWORD = os.getenv('JELLYFIN_PASSWORD')
-JELLYFIN_API_KEY = os.getenv('JELLYFIN_API_KEY')
+# Jellyfin - Configuração Unificada (suporta uma ou múltiplas contas)
+# URLs das contas (separadas por vírgula)
+JELLYFIN_URL = os.getenv('JELLYFIN_URL', '')
+# Usernames (separados por vírgula)
+JELLYFIN_USERNAME = os.getenv('JELLYFIN_USERNAME', '')
+# Passwords (separadas por vírgula)
+JELLYFIN_PASSWORD = os.getenv('JELLYFIN_PASSWORD', '')
+# API Keys (separadas por vírgula)
+JELLYFIN_API_KEY = os.getenv('JELLYFIN_API_KEY', '')
 JELLYFIN_NOTIFICATIONS_ENABLED = os.getenv('JELLYFIN_NOTIFICATIONS_ENABLED', 'False').lower() in ('true', '1', 't')
 JELLYFIN_NOTIFICATION_INTERVAL = int(os.getenv('JELLYFIN_NOTIFICATION_INTERVAL', 1800))
+
+
+def parse_jellyfin_accounts():
+    """Parse Jellyfin accounts from comma-separated environment variables"""
+    urls = [u.strip() for u in JELLYFIN_URL.split(',') if u.strip()]
+    usernames = [u.strip() for u in JELLYFIN_USERNAME.split(',') if u.strip()]
+    passwords = [p.strip() for p in JELLYFIN_PASSWORD.split(',') if p.strip()]
+    api_keys = [k.strip() for k in JELLYFIN_API_KEY.split(',') if k.strip()]
+    
+    accounts = []
+    for i in range(len(urls)):
+        account = {
+            'url': urls[i],
+            'username': usernames[i] if i < len(usernames) else '',
+            'password': passwords[i] if i < len(passwords) else '',
+            'api_key': api_keys[i] if i < len(api_keys) else '',
+        }
+        accounts.append(account)
+    
+    return accounts
+
+
+JELLYFIN_ACCOUNTS_LIST = parse_jellyfin_accounts()
+# Multi-account habilitado se houver mais de uma URL configurada
+JELLYFIN_MULTI_ACCOUNT_ENABLED = len(JELLYFIN_ACCOUNTS_LIST) > 1
 
 # WhatsApp (WAHA)
 WAHA_URL = os.getenv('WAHA_URL', 'http://localhost:3000')

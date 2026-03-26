@@ -38,6 +38,26 @@ JELLYFIN_PASSWORD = os.getenv('JELLYFIN_PASSWORD', '')
 JELLYFIN_API_KEY = os.getenv('JELLYFIN_API_KEY', '')
 
 
+def parse_jellyfin_accounts() -> List[Dict]:
+    urls = [u.strip() for u in JELLYFIN_URL.split(',') if u.strip()]
+    usernames = [u.strip() for u in JELLYFIN_USERNAME.split(',') if u.strip()]
+    passwords = [p.strip() for p in JELLYFIN_PASSWORD.split(',') if p.strip()]
+    api_keys = [k.strip() for k in JELLYFIN_API_KEY.split(',') if k.strip()]
+    accounts = []
+    for i in range(len(urls)):
+        accounts.append({
+            'url': urls[i],
+            'username': usernames[i] if i < len(usernames) else '',
+            'password': passwords[i] if i < len(passwords) else '',
+            'api_key': api_keys[i] if i < len(api_keys) else '',
+        })
+    return accounts
+
+
+JELLYFIN_ACCOUNTS = parse_jellyfin_accounts()
+JELLYFIN_MULTI_ACCOUNT = len(JELLYFIN_ACCOUNTS) > 1
+
+
 def parse_qb_instances() -> List[Dict]:
     names = [n.strip() for n in QB_NAMES.split(',') if n.strip()]
     urls = [u.strip() for u in QB_URLS.split(',') if u.strip()]
@@ -114,18 +134,21 @@ def qb_action(session: req_lib.Session, url: str, action: str, torrent_hash: str
 # Lightweight Jellyfin helpers
 # ---------------------------------------------------------------------------
 
-class JellyfinHelper:
-    def __init__(self):
-        self.url = JELLYFIN_URL.rstrip('/') if JELLYFIN_URL else ''
-        self.api_key = JELLYFIN_API_KEY
+class JellyfinClient:
+    """Cliente individual para uma conta Jellyfin"""
+    def __init__(self, url: str, username: str = '', password: str = '', api_key: str = ''):
+        self.url = url.rstrip('/')
+        self.username = username
+        self.password = password
+        self.api_key = api_key
         self.access_token = None
         self.user_id = None
         self.session = req_lib.Session()
         self._available = False
 
         if self.url:
-            if JELLYFIN_USERNAME and JELLYFIN_PASSWORD:
-                self._authenticate(JELLYFIN_USERNAME, JELLYFIN_PASSWORD)
+            if username and password:
+                self._authenticate(username, password)
             if self.api_key or self.access_token:
                 self._available = True
 
@@ -264,6 +287,138 @@ class JellyfinHelper:
     def get_image_url(self, item_id: str, image_type: str = 'Primary', max_width: int = 300) -> str:
         token = self.api_key or self.access_token or ''
         return f"{self.url}/Items/{item_id}/Images/{image_type}?maxWidth={max_width}&api_key={token}"
+
+
+class JellyfinHelper:
+    """Gerenciador de múltiplas contas Jellyfin para o web backend"""
+    def __init__(self):
+        self.clients: List[JellyfinClient] = []
+        self.multi_account = JELLYFIN_MULTI_ACCOUNT
+        
+        for account in JELLYFIN_ACCOUNTS:
+            url = account.get('url')
+            if url:
+                client = JellyfinClient(
+                    url=url,
+                    username=account.get('username', ''),
+                    password=account.get('password', ''),
+                    api_key=account.get('api_key', '')
+                )
+                if client.is_available():
+                    self.clients.append(client)
+                    logger.info(f"Jellyfin client initialized: {url}")
+        
+        if not self.clients:
+            logger.warning("No Jellyfin accounts configured or available")
+        else:
+            logger.info(f"JellyfinHelper initialized with {len(self.clients)} account(s)")
+    
+    @property
+    def client(self) -> Optional[JellyfinClient]:
+        """Retorna o primeiro cliente disponível (compatibilidade)"""
+        return self.clients[0] if self.clients else None
+    
+    def is_available(self) -> bool:
+        return len(self.clients) > 0
+    
+    def get_libraries(self) -> List[Dict]:
+        all_libraries = []
+        for client in self.clients:
+            try:
+                libraries = client.get_libraries()
+                for lib in libraries:
+                    lib['_jellyfin_url'] = client.url
+                all_libraries.extend(libraries)
+            except Exception as e:
+                logger.error(f"Error getting libraries from {client.url}: {e}")
+        return all_libraries
+    
+    def get_recent_items(self, limit: int = 10) -> List[Dict]:
+        all_items = []
+        for client in self.clients:
+            try:
+                items = client.get_recent_items(limit)
+                for item in items:
+                    item['_jellyfin_url'] = client.url
+                all_items.extend(items)
+            except Exception as e:
+                logger.error(f"Error getting recent items from {client.url}: {e}")
+        
+        # Ordena por data de criação
+        all_items.sort(key=lambda x: x.get('DateCreated', ''), reverse=True)
+        return all_items[:limit]
+    
+    def get_item(self, item_id: str, server_url: str = None) -> Optional[Dict]:
+        """Busca um item específico. Se server_url for fornecido, busca apenas naquele servidor."""
+        clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
+        
+        for client in clients_to_search:
+            try:
+                item = client.get_item(item_id)
+                if item:
+                    item['_jellyfin_url'] = client.url
+                    return item
+            except Exception as e:
+                logger.error(f"Error getting item from {client.url}: {e}")
+        return None
+    
+    def get_seasons(self, series_id: str, server_url: str = None) -> List[Dict]:
+        clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
+        
+        for client in clients_to_search:
+            try:
+                seasons = client.get_seasons(series_id)
+                if seasons:
+                    for season in seasons:
+                        season['_jellyfin_url'] = client.url
+                    return seasons
+            except Exception as e:
+                logger.error(f"Error getting seasons from {client.url}: {e}")
+        return []
+    
+    def get_episodes(self, series_id: str, season_id: str = None, server_url: str = None) -> List[Dict]:
+        clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
+        
+        for client in clients_to_search:
+            try:
+                episodes = client.get_episodes(series_id, season_id)
+                if episodes:
+                    for episode in episodes:
+                        episode['_jellyfin_url'] = client.url
+                    return episodes
+            except Exception as e:
+                logger.error(f"Error getting episodes from {client.url}: {e}")
+        return []
+    
+    def get_playback_info(self, item_id: str, server_url: str = None) -> Optional[Dict]:
+        clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
+        
+        for client in clients_to_search:
+            try:
+                info = client.get_playback_info(item_id)
+                if info:
+                    return info
+            except Exception as e:
+                logger.error(f"Error getting playback info from {client.url}: {e}")
+        return None
+    
+    def get_stream_url(self, item_id: str, server_url: str = None, audio_stream_index: int = None) -> str:
+        clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
+        if clients_to_search:
+            return clients_to_search[0].get_stream_url(item_id, audio_stream_index)
+        return ''
+    
+    def get_subtitle_url(self, item_id: str, media_source_id: str, index: int, server_url: str = None) -> str:
+        clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
+        if clients_to_search:
+            return clients_to_search[0].get_subtitle_url(item_id, media_source_id, index)
+        return ''
+    
+    def get_image_url(self, item_id: str, image_type: str = 'Primary', max_width: int = 300, server_url: str = None) -> str:
+        clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
+        if clients_to_search:
+            return clients_to_search[0].get_image_url(item_id, image_type, max_width)
+        return ''
 
 # ---------------------------------------------------------------------------
 # Lightweight Docker helpers

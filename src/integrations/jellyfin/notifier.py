@@ -15,7 +15,7 @@ class JellyfinNotifier:
         self.jellyfin_manager = jellyfin_manager
         self.interval = interval
         self.state_file = state_file
-        self.known_items: Set[str] = set()
+        self.known_items: Dict[str, Set[str]] = {}  # {url: set(item_ids)}
         self.last_check_time: Optional[float] = None
         self.enabled = True
         self._load_state()
@@ -25,18 +25,33 @@ class JellyfinNotifier:
             if os.path.exists(self.state_file):
                 with open(self.state_file, 'r', encoding='utf-8') as f:
                     state = json.load(f)
-                    self.known_items = set(state.get('known_items', []))
+                    # Suporta formato antigo (set) e novo (dict)
+                    known_items_data = state.get('known_items', [])
+                    if isinstance(known_items_data, list):
+                        # Formato antigo: migra para o primeiro servidor
+                        if self.jellyfin_manager.clients:
+                            first_url = self.jellyfin_manager.clients[0].url
+                            self.known_items = {first_url: set(known_items_data)}
+                        else:
+                            self.known_items = {}
+                    elif isinstance(known_items_data, dict):
+                        # Formato novo: dict de {url: [item_ids]}
+                        self.known_items = {url: set(items) for url, items in known_items_data.items()}
+                    else:
+                        self.known_items = {}
+                    
                     self.last_check_time = state.get('last_check_time')
-                    logger.info(f"Estado carregado: {len(self.known_items)} itens conhecidos")
+                    total_items = sum(len(items) for items in self.known_items.values())
+                    logger.info(f"Estado carregado: {total_items} itens conhecidos em {len(self.known_items)} servidor(es)")
         except Exception as e:
             logger.error(f"Erro ao carregar estado: {e}")
-            self.known_items = set()
+            self.known_items = {}
             self.last_check_time = None
 
     def _save_state(self):
         try:
             state = {
-                'known_items': list(self.known_items),
+                'known_items': {url: list(items) for url, items in self.known_items.items()},
                 'last_check_time': self.last_check_time,
             }
             with open(self.state_file, 'w', encoding='utf-8') as f:
@@ -48,6 +63,8 @@ class JellyfinNotifier:
         name = item.get('Name', 'Sem título')
         item_type = item.get('Type', 'Desconhecido')
         year = item.get('ProductionYear', '')
+        jellyfin_url = item.get('_jellyfin_url', '')
+        
         type_icons = {
             'Movie': '🎬', 'Series': '📺', 'Season': '📺',
             'Episode': '📺', 'Audio': '🎵', 'MusicAlbum': '💿', 'Book': '📚',
@@ -58,6 +75,11 @@ class JellyfinNotifier:
         if year:
             msg_parts.append(f" ({year})")
         msg_parts.append(f"\n📂 Tipo: {item_type}")
+        
+        # Adiciona informação do servidor se houver múltiplas contas
+        if self.jellyfin_manager.multi_account_enabled and jellyfin_url:
+            msg_parts.append(f"\n🌐 Servidor: {jellyfin_url}")
+        
         genres = item.get('Genres', [])
         if genres:
             msg_parts.append(f"\n🎭 Gêneros: {', '.join(genres[:3])}")
@@ -75,20 +97,36 @@ class JellyfinNotifier:
         if not self.jellyfin_manager or not self.jellyfin_manager.is_available():
             logger.warning("Jellyfin não disponível para verificação")
             return []
+        
         try:
-            items = self.jellyfin_manager.client.get_recently_added(limit)
-            if not items:
-                return []
-            new_items = []
-            for item in items:
-                item_id = item.get('Id')
-                if item_id and item_id not in self.known_items:
-                    new_items.append(item)
-                    self.known_items.add(item_id)
+            all_new_items = []
+            
+            # Verifica cada cliente Jellyfin
+            for client in self.jellyfin_manager.clients:
+                try:
+                    items = client.get_recently_added(limit)
+                    if not items:
+                        continue
+                    
+                    # Inicializa set de itens conhecidos para este servidor se não existir
+                    if client.url not in self.known_items:
+                        self.known_items[client.url] = set()
+                    
+                    # Verifica novos itens para este servidor
+                    for item in items:
+                        item_id = item.get('Id')
+                        if item_id and item_id not in self.known_items[client.url]:
+                            item['_jellyfin_url'] = client.url
+                            all_new_items.append(item)
+                            self.known_items[client.url].add(item_id)
+                except Exception as e:
+                    logger.error(f"Erro ao verificar itens de {client.url}: {e}")
+            
             self.last_check_time = time.time()
-            if new_items:
+            if all_new_items:
                 self._save_state()
-            return new_items
+            
+            return all_new_items
         except Exception as e:
             logger.error(f"Erro ao verificar novos itens: {e}")
             return []
@@ -117,15 +155,24 @@ class JellyfinNotifier:
 
     def start_monitoring(self):
         logger.info(f"Iniciando monitoramento do Jellyfin (intervalo: {self.interval}s)")
-        if not self.known_items:
+        
+        # Inicializa itens conhecidos para cada servidor na primeira execução
+        if not self.known_items and self.jellyfin_manager.is_available():
             logger.info("Primeira execução: populando itens conhecidos...")
-            items = self.jellyfin_manager.client.get_recently_added(50) if self.jellyfin_manager.is_available() else []
-            for item in items:
-                item_id = item.get('Id')
-                if item_id:
-                    self.known_items.add(item_id)
+            for client in self.jellyfin_manager.clients:
+                try:
+                    items = client.get_recently_added(50)
+                    self.known_items[client.url] = set()
+                    for item in items:
+                        item_id = item.get('Id')
+                        if item_id:
+                            self.known_items[client.url].add(item_id)
+                    logger.info(f"Servidor {client.url}: {len(self.known_items[client.url])} itens conhecidos")
+                except Exception as e:
+                    logger.error(f"Erro ao inicializar itens de {client.url}: {e}")
             self._save_state()
-            logger.info(f"Itens conhecidos inicializados: {len(self.known_items)}")
+            total_items = sum(len(items) for items in self.known_items.values())
+            logger.info(f"Itens conhecidos inicializados: {total_items} em {len(self.known_items)} servidor(es)")
 
         last_check = 0
         while True:
@@ -151,7 +198,7 @@ class JellyfinNotifier:
         logger.info("Notificações do Jellyfin desabilitadas")
 
     def reset_state(self):
-        self.known_items.clear()
+        self.known_items = {}
         self.last_check_time = None
         self._save_state()
         logger.info("Estado do notificador resetado")
