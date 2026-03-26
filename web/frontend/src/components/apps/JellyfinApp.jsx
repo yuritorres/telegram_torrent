@@ -14,6 +14,7 @@ const JellyfinApp = () => {
   const [selectedSeason, setSelectedSeason] = useState(null)
   const [playingItem, setPlayingItem] = useState(null)
   const [playingTitle, setPlayingTitle] = useState('')
+  const [playingServerUrl, setPlayingServerUrl] = useState(null)
   const [episodeList, setEpisodeList] = useState([])
   const [playingIndex, setPlayingIndex] = useState(-1)
   const [loading, setLoading] = useState(false)
@@ -23,6 +24,15 @@ const JellyfinApp = () => {
   const [filterGenre, setFilterGenre] = useState('all')
   const [sortBy, setSortBy] = useState('recent')
   const [continueWatching, setContinueWatching] = useState([])
+
+  // Helper function to build image URL with server_url parameter
+  const buildImageUrl = (itemId, type = 'Primary', maxWidth = 300, item = null) => {
+    let url = `/api/jellyfin/image/${itemId}?type=${type}&maxWidth=${maxWidth}`
+    if (item && item._jellyfin_url) {
+      url += `&server_url=${encodeURIComponent(item._jellyfin_url)}`
+    }
+    return url
+  }
 
   useEffect(() => {
     const updateContinueWatching = () => {
@@ -101,6 +111,7 @@ const JellyfinApp = () => {
     if (item.Type === 'Movie') {
       setPlayingItem(item.Id)
       setPlayingTitle(item.Name)
+      setPlayingServerUrl(item._jellyfin_url || null)
       setEpisodeList([])
       setPlayingIndex(-1)
       setView('player')
@@ -108,7 +119,11 @@ const JellyfinApp = () => {
       setSelectedItem(item)
       setLoading(true)
       try {
-        const resp = await axios.get(`/api/jellyfin/shows/${item.Id}/seasons`)
+        const params = {}
+        if (item._jellyfin_url) {
+          params.server_url = item._jellyfin_url
+        }
+        const resp = await axios.get(`/api/jellyfin/shows/${item.Id}/seasons`, { params })
         setSeasons(resp.data.items || [])
         setEpisodes([])
         setSelectedSeason(null)
@@ -121,6 +136,7 @@ const JellyfinApp = () => {
     } else if (item.Type === 'Episode') {
       setPlayingItem(item.Id)
       setPlayingTitle(`${item.SeriesName ? item.SeriesName + ' - ' : ''}${item.Name}`)
+      setPlayingServerUrl(item._jellyfin_url || null)
       setEpisodeList([])
       setPlayingIndex(-1)
       setView('player')
@@ -131,9 +147,11 @@ const JellyfinApp = () => {
     setSelectedSeason(season)
     setLoading(true)
     try {
-      const resp = await axios.get(`/api/jellyfin/shows/${selectedItem.Id}/episodes`, {
-        params: { season_id: season.Id }
-      })
+      const params = { season_id: season.Id }
+      if (selectedItem._jellyfin_url) {
+        params.server_url = selectedItem._jellyfin_url
+      }
+      const resp = await axios.get(`/api/jellyfin/shows/${selectedItem.Id}/episodes`, { params })
       setEpisodes(resp.data.items || [])
     } catch (err) {
       console.error('Error fetching episodes:', err)
@@ -145,6 +163,7 @@ const JellyfinApp = () => {
   const handleEpisodePlay = (episode, index) => {
     setPlayingItem(episode.Id)
     setPlayingTitle(`${selectedItem?.Name || ''} - S${episode.ParentIndexNumber || '?'}E${episode.IndexNumber || '?'} - ${episode.Name}`)
+    setPlayingServerUrl(episode._jellyfin_url || selectedItem._jellyfin_url || null)
     setEpisodeList(episodes)
     setPlayingIndex(index)
     setView('player')
@@ -156,6 +175,7 @@ const JellyfinApp = () => {
       const ep = episodeList[nextIdx]
       setPlayingItem(ep.Id)
       setPlayingTitle(`${selectedItem?.Name || ''} - S${ep.ParentIndexNumber || '?'}E${ep.IndexNumber || '?'} - ${ep.Name}`)
+      setPlayingServerUrl(ep._jellyfin_url || selectedItem._jellyfin_url || null)
       setPlayingIndex(nextIdx)
     }
   }
@@ -166,6 +186,7 @@ const JellyfinApp = () => {
       const ep = episodeList[prevIdx]
       setPlayingItem(ep.Id)
       setPlayingTitle(`${selectedItem?.Name || ''} - S${ep.ParentIndexNumber || '?'}E${ep.IndexNumber || '?'} - ${ep.Name}`)
+      setPlayingServerUrl(ep._jellyfin_url || selectedItem._jellyfin_url || null)
       setPlayingIndex(prevIdx)
     }
   }
@@ -191,6 +212,7 @@ const JellyfinApp = () => {
         <MediaPlayer
           itemId={playingItem}
           title={playingTitle}
+          serverUrl={playingServerUrl}
           onClose={goBack}
           onNext={episodeList.length > 0 && playingIndex < episodeList.length - 1 ? handleNext : null}
           onPrevious={episodeList.length > 0 && playingIndex > 0 ? handlePrevious : null}
@@ -217,7 +239,7 @@ const JellyfinApp = () => {
         {/* Series banner */}
         <div className="relative h-40 rounded-lg overflow-hidden bg-secondary">
           <img
-            src={`/api/jellyfin/image/${selectedItem.Id}?type=Backdrop&maxWidth=800`}
+            src={buildImageUrl(selectedItem.Id, 'Backdrop', 800, selectedItem)}
             alt={selectedItem.Name}
             className="w-full h-full object-cover opacity-60"
             onError={(e) => { e.target.style.display = 'none' }}
@@ -248,7 +270,7 @@ const JellyfinApp = () => {
               >
                 <div className="w-16 h-24 rounded overflow-hidden bg-background flex-shrink-0">
                   <img
-                    src={`/api/jellyfin/image/${season.Id}?type=Primary&maxWidth=120`}
+                    src={buildImageUrl(season.Id, 'Primary', 120, season)}
                     alt={season.Name}
                     className="w-full h-full object-cover"
                     onError={(e) => { e.target.onerror = null; e.target.style.display = 'none' }}
@@ -275,7 +297,7 @@ const JellyfinApp = () => {
               >
                 <div className="relative w-28 h-16 rounded overflow-hidden bg-background flex-shrink-0">
                   <img
-                    src={`/api/jellyfin/image/${episode.Id}?type=Primary&maxWidth=200`}
+                    src={buildImageUrl(episode.Id, 'Primary', 200, episode)}
                     alt={episode.Name}
                     className="w-full h-full object-cover"
                     onError={(e) => { e.target.onerror = null; e.target.style.display = 'none' }}
@@ -404,7 +426,7 @@ const JellyfinApp = () => {
                 >
                   <div className="relative aspect-video bg-background">
                     <img
-                      src={`/api/jellyfin/image/${item.Id}?type=${item.ImageTags?.Primary ? 'Primary' : 'Backdrop'}&maxWidth=400`}
+                      src={buildImageUrl(item.Id, item.ImageTags?.Primary ? 'Primary' : 'Backdrop', 400, item)}
                       alt={item.Name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -457,7 +479,7 @@ const JellyfinApp = () => {
             >
               <div className="relative aspect-video bg-background">
                 <img
-                  src={`/api/jellyfin/image/${item.Id}?type=${item.ImageTags?.Primary ? 'Primary' : 'Backdrop'}&maxWidth=400`}
+                  src={buildImageUrl(item.Id, item.ImageTags?.Primary ? 'Primary' : 'Backdrop', 400, item)}
                   alt={item.Name}
                   className="w-full h-full object-cover"
                   onError={(e) => {

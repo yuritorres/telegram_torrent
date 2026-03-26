@@ -714,9 +714,9 @@ async def get_jellyfin_recent(limit: int = 10):
 
 
 @app.get("/api/jellyfin/items/{item_id}")
-async def get_jellyfin_item(item_id: str):
+async def get_jellyfin_item(item_id: str, server_url: str = None):
     if app_state.jellyfin and app_state.jellyfin.is_available():
-        item = app_state.jellyfin.get_item(item_id)
+        item = app_state.jellyfin.get_item(item_id, server_url)
         if item:
             return item
         raise HTTPException(status_code=404, detail="Item not found")
@@ -724,25 +724,27 @@ async def get_jellyfin_item(item_id: str):
 
 
 @app.get("/api/jellyfin/shows/{series_id}/seasons")
-async def get_jellyfin_seasons(series_id: str):
+async def get_jellyfin_seasons(series_id: str, server_url: str = None):
     if app_state.jellyfin and app_state.jellyfin.is_available():
-        return {"items": app_state.jellyfin.get_seasons(series_id)}
+        return {"items": app_state.jellyfin.get_seasons(series_id, server_url)}
     raise HTTPException(status_code=503, detail="Jellyfin not available")
 
 
 @app.get("/api/jellyfin/shows/{series_id}/episodes")
-async def get_jellyfin_episodes(series_id: str, season_id: str = None):
+async def get_jellyfin_episodes(series_id: str, season_id: str = None, server_url: str = None):
     if app_state.jellyfin and app_state.jellyfin.is_available():
-        return {"items": app_state.jellyfin.get_episodes(series_id, season_id)}
+        return {"items": app_state.jellyfin.get_episodes(series_id, season_id, server_url)}
     raise HTTPException(status_code=503, detail="Jellyfin not available")
 
 
 @app.get("/api/jellyfin/image/{item_id}")
-async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int = 300):
+async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int = 300, server_url: str = None):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
-    image_url = jf.get_image_url(item_id, type, maxWidth)
+    image_url = jf.get_image_url(item_id, type, maxWidth, server_url)
+    if not image_url:
+        raise HTTPException(status_code=404, detail="Image not found - server not available")
     try:
         resp = req_lib.get(image_url, stream=True, timeout=30)
         if resp.status_code == 404:
@@ -759,21 +761,23 @@ async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int 
 
 
 @app.get("/api/jellyfin/playback-info/{item_id}")
-async def get_jellyfin_playback_info(item_id: str):
+async def get_jellyfin_playback_info(item_id: str, server_url: str = None):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
-    info = app_state.jellyfin.get_playback_info(item_id)
+    info = app_state.jellyfin.get_playback_info(item_id, server_url)
     if info:
         return info
     raise HTTPException(status_code=404, detail="Playback info not found")
 
 
 @app.get("/api/jellyfin/subtitles/{item_id}/{media_source_id}/{index}")
-async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int):
+async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int, server_url: str = None):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
-    sub_url = jf.get_subtitle_url(item_id, media_source_id, index)
+    sub_url = jf.get_subtitle_url(item_id, media_source_id, index, server_url)
+    if not sub_url:
+        raise HTTPException(status_code=404, detail="Subtitle not found - server not available")
     try:
         resp = req_lib.get(sub_url, stream=True, timeout=30)
         resp.raise_for_status()
@@ -788,11 +792,11 @@ async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int):
 
 
 @app.get("/api/jellyfin/stream/{item_id}")
-async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None):
+async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None, server_url: str = None):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
-    stream_url = jf.get_stream_url(item_id, audio_stream_index=audioStreamIndex)
+    stream_url = jf.get_stream_url(item_id, server_url, audioStreamIndex)
     headers = {}
     if 'range' in request.headers:
         headers['Range'] = request.headers['range']

@@ -77,6 +77,8 @@ A interface web também suporta múltiplas contas:
 - Itens recentes agregados de todos os servidores
 - Bibliotecas de todos os servidores
 - Identificação do servidor de origem em cada item
+- Imagens, streams e legendas buscadas do servidor correto automaticamente
+- Player de vídeo funciona corretamente com conteúdo de qualquer servidor
 
 ## Mudanças Técnicas
 

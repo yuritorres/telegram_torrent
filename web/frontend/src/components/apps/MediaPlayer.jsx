@@ -3,7 +3,7 @@ import { X, Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Subt
 import axios from 'axios'
 import { saveWatchProgress, getItemProgress, removeItemProgress } from '../../utils/watchProgress'
 
-const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
+const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) => {
   const videoRef = useRef(null)
   const containerRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -25,16 +25,27 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
 
   const buildStreamUrl = useCallback((audioIdx) => {
     let url = `/api/jellyfin/stream/${itemId}`
+    const params = []
     if (audioIdx !== null && audioIdx !== undefined) {
-      url += `?audioStreamIndex=${audioIdx}`
+      params.push(`audioStreamIndex=${audioIdx}`)
+    }
+    if (serverUrl) {
+      params.push(`server_url=${encodeURIComponent(serverUrl)}`)
+    }
+    if (params.length > 0) {
+      url += `?${params.join('&')}`
     }
     return url
-  }, [itemId])
+  }, [itemId, serverUrl])
 
   useEffect(() => {
     const fetchPlaybackInfo = async () => {
       try {
-        const resp = await axios.get(`/api/jellyfin/playback-info/${itemId}`)
+        const params = {}
+        if (serverUrl) {
+          params.server_url = serverUrl
+        }
+        const resp = await axios.get(`/api/jellyfin/playback-info/${itemId}`, { params })
         const sources = resp.data?.MediaSources || []
         if (sources.length > 0) {
           const source = sources[0]
@@ -263,17 +274,23 @@ const MediaPlayer = ({ itemId, title, onClose, onNext, onPrevious }) => {
           onWaiting={() => setIsLoading(true)}
           autoPlay
         >
-          {mediaSourceId && subtitleTracks.map((sub) => (
-            <track
-              key={sub.index}
-              kind="subtitles"
-              label={sub.label}
-              srcLang={sub.language || 'und'}
-              src={`/api/jellyfin/subtitles/${itemId}/${mediaSourceId}/${sub.index}`}
-              data-sub-index={sub.index}
-              default={sub.isDefault}
-            />
-          ))}
+          {mediaSourceId && subtitleTracks.map((sub) => {
+            let subUrl = `/api/jellyfin/subtitles/${itemId}/${mediaSourceId}/${sub.index}`
+            if (serverUrl) {
+              subUrl += `?server_url=${encodeURIComponent(serverUrl)}`
+            }
+            return (
+              <track
+                key={sub.index}
+                kind="subtitles"
+                label={sub.label}
+                srcLang={sub.language || 'und'}
+                src={subUrl}
+                data-sub-index={sub.index}
+                default={sub.isDefault}
+              />
+            )
+          })}
         </video>
       </div>
 
