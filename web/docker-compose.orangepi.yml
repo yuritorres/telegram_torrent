@@ -1,0 +1,72 @@
+services:
+  web-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: torrentos-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=America/Sao_Paulo
+      # Otimizações para dispositivos com pouca RAM
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    env_file:
+      - ../.env
+    networks:
+      - torrentos-network
+    # Limites de recursos para OrangePi 2W (1.5GB RAM)
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '1.0'
+        reservations:
+          memory: 64M
+          cpus: '0.5'
+    # Configurações de saúde
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  web-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: torrentos-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    environment:
+      - TZ=America/Sao_Paulo
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - torrentos-network
+    depends_on:
+      web-backend:
+        condition: service_healthy
+    # Limites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+          cpus: '0.5'
+        reservations:
+          memory: 16M
+          cpus: '0.25'
+    # Configurações de saúde
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  torrentos-network:
+    driver: bridge
