@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import axios from '../utils/axios'
+import { systemEvents, SYSTEM_EVENTS } from '../utils/eventEmitter'
 
 const SystemContext = createContext()
 
@@ -17,6 +18,8 @@ export const SystemProvider = ({ children }) => {
   const [jellyfinItems, setJellyfinItems] = useState([])
   const [dockerContainers, setDockerContainers] = useState([])
   const [ws, setWs] = useState(null)
+  const [clipboard, setClipboard] = useState(null)
+  const [sharedData, setSharedData] = useState({})
 
   useEffect(() => {
     fetchSystemStatus()
@@ -94,8 +97,17 @@ export const SystemProvider = ({ children }) => {
         params: { magnet_link: magnetLink }
       })
       fetchTorrents()
+      systemEvents.emit(SYSTEM_EVENTS.TORRENT_ADDED, { magnetLink })
+      systemEvents.emit(SYSTEM_EVENTS.NOTIFICATION_SHOW, {
+        type: 'success',
+        message: 'Torrent adicionado com sucesso',
+      })
     } catch (error) {
       console.error('Error adding torrent:', error)
+      systemEvents.emit(SYSTEM_EVENTS.NOTIFICATION_SHOW, {
+        type: 'error',
+        message: 'Erro ao adicionar torrent',
+      })
       throw error
     }
   }
@@ -124,8 +136,17 @@ export const SystemProvider = ({ children }) => {
         params: { delete_files: deleteFiles }
       })
       fetchTorrents()
+      systemEvents.emit(SYSTEM_EVENTS.TORRENT_DELETED, { hash, deleteFiles })
+      systemEvents.emit(SYSTEM_EVENTS.NOTIFICATION_SHOW, {
+        type: 'success',
+        message: 'Torrent removido com sucesso',
+      })
     } catch (error) {
       console.error('Error deleting torrent:', error)
+      systemEvents.emit(SYSTEM_EVENTS.NOTIFICATION_SHOW, {
+        type: 'error',
+        message: 'Erro ao remover torrent',
+      })
     }
   }
 
@@ -133,8 +154,17 @@ export const SystemProvider = ({ children }) => {
     try {
       await axios.post(`/api/docker/containers/${name}/start`)
       fetchDockerContainers()
+      systemEvents.emit(SYSTEM_EVENTS.DOCKER_CONTAINER_STARTED, { name })
+      systemEvents.emit(SYSTEM_EVENTS.NOTIFICATION_SHOW, {
+        type: 'success',
+        message: `Container ${name} iniciado`,
+      })
     } catch (error) {
       console.error('Error starting container:', error)
+      systemEvents.emit(SYSTEM_EVENTS.NOTIFICATION_SHOW, {
+        type: 'error',
+        message: `Erro ao iniciar container ${name}`,
+      })
     }
   }
 
@@ -142,10 +172,50 @@ export const SystemProvider = ({ children }) => {
     try {
       await axios.post(`/api/docker/containers/${name}/stop`)
       fetchDockerContainers()
+      systemEvents.emit(SYSTEM_EVENTS.DOCKER_CONTAINER_STOPPED, { name })
+      systemEvents.emit(SYSTEM_EVENTS.NOTIFICATION_SHOW, {
+        type: 'success',
+        message: `Container ${name} parado`,
+      })
     } catch (error) {
       console.error('Error stopping container:', error)
+      systemEvents.emit(SYSTEM_EVENTS.NOTIFICATION_SHOW, {
+        type: 'error',
+        message: `Erro ao parar container ${name}`,
+      })
     }
   }
+
+  const copyToClipboard = useCallback((data, type = 'text') => {
+    setClipboard({ data, type, timestamp: Date.now() })
+    systemEvents.emit('clipboard:copy', { data, type })
+  }, [])
+
+  const pasteFromClipboard = useCallback(() => {
+    return clipboard
+  }, [clipboard])
+
+  const clearClipboard = useCallback(() => {
+    setClipboard(null)
+    systemEvents.emit('clipboard:clear')
+  }, [])
+
+  const setSharedValue = useCallback((key, value) => {
+    setSharedData(prev => ({ ...prev, [key]: value }))
+    systemEvents.emit('shared:update', { key, value })
+  }, [])
+
+  const getSharedValue = useCallback((key) => {
+    return sharedData[key]
+  }, [sharedData])
+
+  const emitEvent = useCallback((event, data) => {
+    systemEvents.emit(event, data)
+  }, [])
+
+  const onEvent = useCallback((event, handler) => {
+    return systemEvents.on(event, handler)
+  }, [])
 
   const value = {
     systemStatus,
@@ -162,6 +232,16 @@ export const SystemProvider = ({ children }) => {
     deleteTorrent,
     startContainer,
     stopContainer,
+    clipboard,
+    copyToClipboard,
+    pasteFromClipboard,
+    clearClipboard,
+    sharedData,
+    setSharedValue,
+    getSharedValue,
+    emitEvent,
+    onEvent,
+    events: SYSTEM_EVENTS,
   }
 
   return <SystemContext.Provider value={value}>{children}</SystemContext.Provider>

@@ -2,8 +2,10 @@ import React from 'react'
 import { BrowserRouter as Router } from 'react-router-dom'
 import Desktop from './components/Desktop'
 import Login from './components/Login'
+import Notifications from './components/Notifications'
 import { SystemProvider } from './context/SystemContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { NotificationProvider } from './context/NotificationContext'
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -24,13 +26,16 @@ function AppContent() {
   }
 
   return (
-    <SystemProvider>
-      <Router>
-        <div className="desktop">
-          <Desktop />
-        </div>
-      </Router>
-    </SystemProvider>
+    <NotificationProvider>
+      <SystemProvider>
+        <Router>
+          <div className="desktop">
+            <Desktop />
+            <Notifications />
+          </div>
+        </Router>
+      </SystemProvider>
+    </NotificationProvider>
   )
 }
 

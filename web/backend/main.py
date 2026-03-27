@@ -1079,6 +1079,200 @@ async def uninstall_appstore_app(app_id: str, current_user: Dict = Depends(get_c
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------------------------------------------
+# File Manager Routes
+# ---------------------------------------------------------------------------
+
+from fastapi import UploadFile, File
+from fastapi.responses import FileResponse
+import shutil
+
+# Base directory for file manager (downloads folder)
+FILE_MANAGER_BASE = Path(os.getenv('FILE_MANAGER_PATH', './downloads'))
+FILE_MANAGER_BASE.mkdir(parents=True, exist_ok=True)
+
+@app.get("/api/files/list")
+async def list_files(path: str = "", current_user: Dict = Depends(get_current_user)):
+    """List files and directories in the specified path"""
+    try:
+        target_path = FILE_MANAGER_BASE / path
+        
+        # Security: prevent path traversal
+        if not str(target_path.resolve()).startswith(str(FILE_MANAGER_BASE.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if not target_path.exists():
+            raise HTTPException(status_code=404, detail="Path not found")
+        
+        items = []
+        for item in sorted(target_path.iterdir()):
+            try:
+                stat = item.stat()
+                items.append({
+                    "name": item.name,
+                    "path": str(item.relative_to(FILE_MANAGER_BASE)),
+                    "type": "directory" if item.is_dir() else "file",
+                    "size": stat.st_size if item.is_file() else 0,
+                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                })
+            except Exception as e:
+                logger.error(f"Error reading item {item}: {e}")
+                continue
+        
+        return {
+            "current_path": path,
+            "items": items,
+            "total": len(items)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing files: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/files/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    path: str = "",
+    current_user: Dict = Depends(get_current_user)
+):
+    """Upload a file to the specified path"""
+    try:
+        target_dir = FILE_MANAGER_BASE / path
+        
+        # Security: prevent path traversal
+        if not str(target_dir.resolve()).startswith(str(FILE_MANAGER_BASE.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        target_dir.mkdir(parents=True, exist_ok=True)
+        file_path = target_dir / file.filename
+        
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        return {
+            "success": True,
+            "filename": file.filename,
+            "path": str(file_path.relative_to(FILE_MANAGER_BASE)),
+            "size": file_path.stat().st_size
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/files/download")
+async def download_file(path: str, current_user: Dict = Depends(get_current_user)):
+    """Download a file"""
+    try:
+        file_path = FILE_MANAGER_BASE / path
+        
+        # Security: prevent path traversal
+        if not str(file_path.resolve()).startswith(str(FILE_MANAGER_BASE.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if not file_path.exists() or not file_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        return FileResponse(
+            path=file_path,
+            filename=file_path.name,
+            media_type='application/octet-stream'
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/files/delete")
+async def delete_file(path: str, current_user: Dict = Depends(get_current_user)):
+    """Delete a file or directory"""
+    try:
+        target_path = FILE_MANAGER_BASE / path
+        
+        # Security: prevent path traversal and deletion of base directory
+        if not str(target_path.resolve()).startswith(str(FILE_MANAGER_BASE.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if target_path == FILE_MANAGER_BASE:
+            raise HTTPException(status_code=403, detail="Cannot delete base directory")
+        
+        if not target_path.exists():
+            raise HTTPException(status_code=404, detail="Path not found")
+        
+        if target_path.is_dir():
+            shutil.rmtree(target_path)
+        else:
+            target_path.unlink()
+        
+        return {"success": True, "message": f"Deleted {path}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/files/create-folder")
+async def create_folder(path: str, name: str, current_user: Dict = Depends(get_current_user)):
+    """Create a new folder"""
+    try:
+        target_dir = FILE_MANAGER_BASE / path / name
+        
+        # Security: prevent path traversal
+        if not str(target_dir.resolve()).startswith(str(FILE_MANAGER_BASE.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if target_dir.exists():
+            raise HTTPException(status_code=400, detail="Folder already exists")
+        
+        target_dir.mkdir(parents=True, exist_ok=False)
+        
+        return {
+            "success": True,
+            "path": str(target_dir.relative_to(FILE_MANAGER_BASE)),
+            "name": name
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating folder: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/files/rename")
+async def rename_file(path: str, new_name: str, current_user: Dict = Depends(get_current_user)):
+    """Rename a file or directory"""
+    try:
+        old_path = FILE_MANAGER_BASE / path
+        new_path = old_path.parent / new_name
+        
+        # Security: prevent path traversal
+        if not str(old_path.resolve()).startswith(str(FILE_MANAGER_BASE.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+        if not str(new_path.resolve()).startswith(str(FILE_MANAGER_BASE.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if not old_path.exists():
+            raise HTTPException(status_code=404, detail="Path not found")
+        
+        if new_path.exists():
+            raise HTTPException(status_code=400, detail="Target name already exists")
+        
+        old_path.rename(new_path)
+        
+        return {
+            "success": True,
+            "old_path": path,
+            "new_path": str(new_path.relative_to(FILE_MANAGER_BASE)),
+            "new_name": new_name
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error renaming file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
 # WebSocket
 # ---------------------------------------------------------------------------
 

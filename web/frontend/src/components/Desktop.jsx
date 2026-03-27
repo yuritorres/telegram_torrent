@@ -6,7 +6,8 @@ import JellyfinApp from './apps/JellyfinApp'
 import DockerApp from './apps/DockerApp'
 import SystemMonitor from './apps/SystemMonitor'
 import AppStoreApp from './apps/AppStoreApp'
-import { Download, Film, Container, Activity, Store } from 'lucide-react'
+import FileManagerApp from './apps/FileManagerApp'
+import { Download, Film, Container, Activity, Store, FolderOpen } from 'lucide-react'
 
 const Desktop = () => {
   const [openWindows, setOpenWindows] = useState([])
@@ -18,6 +19,13 @@ const Desktop = () => {
       icon: Store,
       component: AppStoreApp,
       color: 'bg-gradient-to-br from-purple-500 to-pink-500'
+    },
+    {
+      id: 'files',
+      name: 'Gerenciador de Arquivos',
+      icon: FolderOpen,
+      component: FileManagerApp,
+      color: 'bg-orange-500'
     },
     {
       id: 'torrents',
