@@ -32,6 +32,7 @@ from auth import (
     generate_password_hash,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
+from telegram_storage import TelegramStorageService
 
 # ---------------------------------------------------------------------------
 # Configuration (read directly from environment variables)
@@ -534,6 +535,7 @@ class AppState:
         self.qb_sessions: List[Dict] = []
         self.jellyfin: Optional[JellyfinHelper] = None
         self.docker: Optional[DockerHelper] = None
+        self.telegram_storage: Optional[TelegramStorageService] = None
 
 app_state = AppState()
 
@@ -566,6 +568,12 @@ async def lifespan(app: FastAPI):
             logger.info("Docker initialized")
     except Exception as e:
         logger.error(f"Docker init error: {e}")
+
+    try:
+        app_state.telegram_storage = TelegramStorageService()
+        logger.info("Telegram Storage initialized")
+    except Exception as e:
+        logger.error(f"Telegram Storage init error: {e}")
 
     asyncio.create_task(broadcast_updates())
     yield
@@ -1270,6 +1278,120 @@ async def rename_file(path: str, new_name: str, current_user: Dict = Depends(get
         raise
     except Exception as e:
         logger.error(f"Error renaming file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
+# Telegram File Editor Routes
+# ---------------------------------------------------------------------------
+
+class FileCreateRequest(BaseModel):
+    filename: str
+    content: str
+    file_type: str = "text"
+
+class FileUpdateRequest(BaseModel):
+    content: str
+
+@app.get("/api/editor/files")
+async def list_telegram_files(current_user: Dict = Depends(get_current_user)):
+    """List all files stored in Telegram"""
+    if not app_state.telegram_storage:
+        raise HTTPException(status_code=503, detail="Telegram Storage not available")
+    
+    try:
+        files = app_state.telegram_storage.list_files()
+        return {"files": files, "total": len(files)}
+    except Exception as e:
+        logger.error(f"Error listing Telegram files: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/editor/files")
+async def create_telegram_file(request: FileCreateRequest, current_user: Dict = Depends(get_current_user)):
+    """Create a new file and save to Telegram"""
+    if not app_state.telegram_storage:
+        raise HTTPException(status_code=503, detail="Telegram Storage not available")
+    
+    try:
+        result = app_state.telegram_storage.save_file(
+            filename=request.filename,
+            content=request.content,
+            file_type=request.file_type
+        )
+        
+        if result:
+            return {"success": True, "file": result}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save file to Telegram")
+    except Exception as e:
+        logger.error(f"Error creating Telegram file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/editor/files/{file_id}")
+async def get_telegram_file(file_id: str, current_user: Dict = Depends(get_current_user)):
+    """Get a file from Telegram"""
+    if not app_state.telegram_storage:
+        raise HTTPException(status_code=503, detail="Telegram Storage not available")
+    
+    try:
+        result = app_state.telegram_storage.get_file(file_id)
+        
+        if result:
+            return {
+                "success": True,
+                "content": result['content'],
+                "metadata": result['metadata']
+            }
+        else:
+            raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        logger.error(f"Error getting Telegram file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/editor/files/{file_id}")
+async def update_telegram_file(file_id: str, request: FileUpdateRequest, current_user: Dict = Depends(get_current_user)):
+    """Update a file in Telegram"""
+    if not app_state.telegram_storage:
+        raise HTTPException(status_code=503, detail="Telegram Storage not available")
+    
+    try:
+        result = app_state.telegram_storage.update_file(file_id, request.content)
+        
+        if result:
+            return {"success": True, "file": result}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update file")
+    except Exception as e:
+        logger.error(f"Error updating Telegram file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/editor/files/{file_id}")
+async def delete_telegram_file(file_id: str, current_user: Dict = Depends(get_current_user)):
+    """Delete a file from Telegram"""
+    if not app_state.telegram_storage:
+        raise HTTPException(status_code=503, detail="Telegram Storage not available")
+    
+    try:
+        result = app_state.telegram_storage.delete_file(file_id)
+        
+        if result:
+            return {"success": True, "message": "File deleted"}
+        else:
+            raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        logger.error(f"Error deleting Telegram file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/editor/files/search/{query}")
+async def search_telegram_files(query: str, current_user: Dict = Depends(get_current_user)):
+    """Search files by filename"""
+    if not app_state.telegram_storage:
+        raise HTTPException(status_code=503, detail="Telegram Storage not available")
+    
+    try:
+        results = app_state.telegram_storage.search_files(query)
+        return {"files": results, "total": len(results)}
+    except Exception as e:
+        logger.error(f"Error searching Telegram files: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------------------------------------------

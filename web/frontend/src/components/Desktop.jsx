@@ -7,7 +7,8 @@ import DockerApp from './apps/DockerApp'
 import SystemMonitor from './apps/SystemMonitor'
 import AppStoreApp from './apps/AppStoreApp'
 import FileManagerApp from './apps/FileManagerApp'
-import { Download, Film, Container, Activity, Store, FolderOpen } from 'lucide-react'
+import FileEditor from './FileEditor'
+import { Download, Film, Container, Activity, Store, FolderOpen, FileText } from 'lucide-react'
 
 const Desktop = () => {
   const [openWindows, setOpenWindows] = useState([])
@@ -19,6 +20,13 @@ const Desktop = () => {
       icon: Store,
       component: AppStoreApp,
       color: 'bg-gradient-to-br from-purple-500 to-pink-500'
+    },
+    {
+      id: 'editor',
+      name: 'Editor de Arquivos',
+      icon: FileText,
+      component: FileEditor,
+      color: 'bg-gradient-to-br from-yellow-500 to-orange-500'
     },
     {
       id: 'files',

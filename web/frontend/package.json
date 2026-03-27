@@ -23,7 +23,8 @@
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.1",
     "axios": "^1.6.7",
-    "recharts": "^2.12.0"
+    "recharts": "^2.12.0",
+    "@monaco-editor/react": "^4.6.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",
