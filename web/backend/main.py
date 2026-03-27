@@ -9,20 +9,29 @@ import json
 import yaml
 import requests as req_lib
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 import asyncio
 import logging
 from typing import List, Optional, Dict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from pydantic import BaseModel
 
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+from auth import (
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+    generate_password_hash,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+)
 
 # ---------------------------------------------------------------------------
 # Configuration (read directly from environment variables)
@@ -619,6 +628,22 @@ def get_first_session():
     return None
 
 # ---------------------------------------------------------------------------
+# Pydantic Models
+# ---------------------------------------------------------------------------
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    expires_in: int
+
+class PasswordHashRequest(BaseModel):
+    password: str
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
@@ -627,8 +652,42 @@ async def root():
     return {"name": "Telegram Torrent Manager API", "version": "1.0.0", "status": "running"}
 
 
+@app.post("/api/auth/login", response_model=TokenResponse)
+async def login(request: LoginRequest):
+    """Authenticate user and return JWT token"""
+    if not authenticate_user(request.username, request.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = create_access_token(
+        data={"sub": request.username},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    }
+
+
+@app.post("/api/auth/generate-hash")
+async def generate_hash(request: PasswordHashRequest):
+    """Generate password hash for configuration (utility endpoint)"""
+    return {"password_hash": generate_password_hash(request.password)}
+
+
+@app.get("/api/auth/verify")
+async def verify_auth(current_user: Dict = Depends(get_current_user)):
+    """Verify if the current token is valid"""
+    return {"authenticated": True, "username": current_user["username"]}
+
+
 @app.get("/api/system/status")
-async def get_system_status():
+async def get_system_status(current_user: Dict = Depends(get_current_user)):
     connected_qb = any(i['session'] is not None for i in app_state.qb_sessions)
     return {
         "qbittorrent": {
@@ -648,7 +707,7 @@ async def get_system_status():
 
 
 @app.get("/api/torrents")
-async def get_torrents():
+async def get_torrents(current_user: Dict = Depends(get_current_user)):
     try:
         torrents = get_all_torrents()
         active = [t for t in torrents if t.get('state') in ['downloading', 'uploading', 'stalledDL', 'stalledUP']]
@@ -668,7 +727,7 @@ async def get_torrents():
 
 
 @app.post("/api/torrents/add")
-async def add_torrent(magnet_link: str):
+async def add_torrent(magnet_link: str, current_user: Dict = Depends(get_current_user)):
     try:
         inst = get_first_session()
         if inst:
@@ -682,7 +741,7 @@ async def add_torrent(magnet_link: str):
 
 
 @app.post("/api/torrents/{torrent_hash}/pause")
-async def pause_torrent(torrent_hash: str):
+async def pause_torrent(torrent_hash: str, current_user: Dict = Depends(get_current_user)):
     inst = get_first_session()
     if not inst:
         raise HTTPException(status_code=503, detail="qBittorrent not connected")
@@ -691,7 +750,7 @@ async def pause_torrent(torrent_hash: str):
 
 
 @app.post("/api/torrents/{torrent_hash}/resume")
-async def resume_torrent(torrent_hash: str):
+async def resume_torrent(torrent_hash: str, current_user: Dict = Depends(get_current_user)):
     inst = get_first_session()
     if not inst:
         raise HTTPException(status_code=503, detail="qBittorrent not connected")
@@ -700,7 +759,7 @@ async def resume_torrent(torrent_hash: str):
 
 
 @app.delete("/api/torrents/{torrent_hash}")
-async def delete_torrent(torrent_hash: str, delete_files: bool = False):
+async def delete_torrent(torrent_hash: str, delete_files: bool = False, current_user: Dict = Depends(get_current_user)):
     inst = get_first_session()
     if not inst:
         raise HTTPException(status_code=503, detail="qBittorrent not connected")
@@ -709,21 +768,21 @@ async def delete_torrent(torrent_hash: str, delete_files: bool = False):
 
 
 @app.get("/api/jellyfin/libraries")
-async def get_jellyfin_libraries():
+async def get_jellyfin_libraries(current_user: Dict = Depends(get_current_user)):
     if app_state.jellyfin and app_state.jellyfin.is_available():
         return {"libraries": app_state.jellyfin.get_libraries()}
     raise HTTPException(status_code=503, detail="Jellyfin not available")
 
 
 @app.get("/api/jellyfin/recent")
-async def get_jellyfin_recent(limit: int = 10):
+async def get_jellyfin_recent(limit: int = 10, current_user: Dict = Depends(get_current_user)):
     if app_state.jellyfin and app_state.jellyfin.is_available():
         return {"items": app_state.jellyfin.get_recent_items(limit=limit)}
     raise HTTPException(status_code=503, detail="Jellyfin not available")
 
 
 @app.get("/api/jellyfin/items/{item_id}")
-async def get_jellyfin_item(item_id: str, server_url: str = None):
+async def get_jellyfin_item(item_id: str, server_url: str = None, current_user: Dict = Depends(get_current_user)):
     if app_state.jellyfin and app_state.jellyfin.is_available():
         item = app_state.jellyfin.get_item(item_id, server_url)
         if item:
@@ -733,21 +792,21 @@ async def get_jellyfin_item(item_id: str, server_url: str = None):
 
 
 @app.get("/api/jellyfin/shows/{series_id}/seasons")
-async def get_jellyfin_seasons(series_id: str, server_url: str = None):
+async def get_jellyfin_seasons(series_id: str, server_url: str = None, current_user: Dict = Depends(get_current_user)):
     if app_state.jellyfin and app_state.jellyfin.is_available():
         return {"items": app_state.jellyfin.get_seasons(series_id, server_url)}
     raise HTTPException(status_code=503, detail="Jellyfin not available")
 
 
 @app.get("/api/jellyfin/shows/{series_id}/episodes")
-async def get_jellyfin_episodes(series_id: str, season_id: str = None, server_url: str = None):
+async def get_jellyfin_episodes(series_id: str, season_id: str = None, server_url: str = None, current_user: Dict = Depends(get_current_user)):
     if app_state.jellyfin and app_state.jellyfin.is_available():
         return {"items": app_state.jellyfin.get_episodes(series_id, season_id, server_url)}
     raise HTTPException(status_code=503, detail="Jellyfin not available")
 
 
 @app.get("/api/jellyfin/image/{item_id}")
-async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int = 300, server_url: str = None):
+async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int = 300, server_url: str = None, current_user: Dict = Depends(get_current_user)):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
@@ -770,7 +829,7 @@ async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int 
 
 
 @app.get("/api/jellyfin/playback-info/{item_id}")
-async def get_jellyfin_playback_info(item_id: str, server_url: str = None):
+async def get_jellyfin_playback_info(item_id: str, server_url: str = None, current_user: Dict = Depends(get_current_user)):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     info = app_state.jellyfin.get_playback_info(item_id, server_url)
@@ -780,7 +839,7 @@ async def get_jellyfin_playback_info(item_id: str, server_url: str = None):
 
 
 @app.get("/api/jellyfin/subtitles/{item_id}/{media_source_id}/{index}")
-async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int, server_url: str = None):
+async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int, server_url: str = None, current_user: Dict = Depends(get_current_user)):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
@@ -801,7 +860,7 @@ async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int, 
 
 
 @app.get("/api/jellyfin/stream/{item_id}")
-async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None, server_url: str = None):
+async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None, server_url: str = None, current_user: Dict = Depends(get_current_user)):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
@@ -827,14 +886,14 @@ async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int 
 
 
 @app.get("/api/docker/containers")
-async def get_docker_containers():
+async def get_docker_containers(current_user: Dict = Depends(get_current_user)):
     if app_state.docker and app_state.docker.is_available():
         return {"containers": app_state.docker.list_containers()}
     raise HTTPException(status_code=503, detail="Docker not available")
 
 
 @app.post("/api/docker/containers/{container_name}/start")
-async def start_container(container_name: str):
+async def start_container(container_name: str, current_user: Dict = Depends(get_current_user)):
     if app_state.docker and app_state.docker.is_available():
         ok, msg = app_state.docker.start_container(container_name)
         return {"success": ok, "message": msg}
@@ -842,7 +901,7 @@ async def start_container(container_name: str):
 
 
 @app.post("/api/docker/containers/{container_name}/stop")
-async def stop_container(container_name: str):
+async def stop_container(container_name: str, current_user: Dict = Depends(get_current_user)):
     if app_state.docker and app_state.docker.is_available():
         ok, msg = app_state.docker.stop_container(container_name)
         return {"success": ok, "message": msg}
@@ -918,7 +977,9 @@ class AppStoreHelper:
                 return False, "No compose configuration found"
             
             # Create docker-compose.yml in temp location
-            compose_dir = Path(f"/tmp/appstore_{app_id}")
+            import tempfile
+            temp_dir = Path(tempfile.gettempdir())
+            compose_dir = temp_dir / f"appstore_{app_id}"
             compose_dir.mkdir(parents=True, exist_ok=True)
             compose_file = compose_dir / "docker-compose.yml"
             
@@ -932,10 +993,10 @@ class AppStoreHelper:
             with open(compose_file, 'w') as f:
                 f.write(compose_str)
             
-            # Use docker-compose to deploy
+            # Use docker compose to deploy (modern Docker Desktop syntax)
             import subprocess
             result = subprocess.run(
-                ['docker-compose', '-f', str(compose_file), 'up', '-d'],
+                ['docker', 'compose', '-f', str(compose_file), 'up', '-d'],
                 capture_output=True,
                 text=True
             )
@@ -954,12 +1015,12 @@ class AppStoreHelper:
 # ---------------------------------------------------------------------------
 
 @app.get("/api/appstore/categories")
-async def get_appstore_categories():
+async def get_appstore_categories(current_user: Dict = Depends(get_current_user)):
     appstore = AppStoreHelper()
     return {"categories": appstore.get_categories()}
 
 @app.get("/api/appstore/apps")
-async def get_appstore_apps(category: Optional[str] = None, featured: Optional[bool] = None):
+async def get_appstore_apps(category: Optional[str] = None, featured: Optional[bool] = None, current_user: Dict = Depends(get_current_user)):
     appstore = AppStoreHelper()
     
     if featured:
@@ -972,7 +1033,7 @@ async def get_appstore_apps(category: Optional[str] = None, featured: Optional[b
     return {"apps": apps}
 
 @app.get("/api/appstore/apps/{app_id}")
-async def get_appstore_app(app_id: str):
+async def get_appstore_app(app_id: str, current_user: Dict = Depends(get_current_user)):
     appstore = AppStoreHelper()
     app = appstore.get_app_by_id(app_id)
     
@@ -982,7 +1043,7 @@ async def get_appstore_app(app_id: str):
     return app
 
 @app.post("/api/appstore/apps/{app_id}/install")
-async def install_appstore_app(app_id: str):
+async def install_appstore_app(app_id: str, current_user: Dict = Depends(get_current_user)):
     appstore = AppStoreHelper()
     success, message = appstore.install_app(app_id, app_state.docker)
     
@@ -992,18 +1053,22 @@ async def install_appstore_app(app_id: str):
         raise HTTPException(status_code=500, detail=message)
 
 @app.post("/api/appstore/apps/{app_id}/uninstall")
-async def uninstall_appstore_app(app_id: str):
+async def uninstall_appstore_app(app_id: str, current_user: Dict = Depends(get_current_user)):
     if not app_state.docker or not app_state.docker.is_available():
         raise HTTPException(status_code=503, detail="Docker not available")
     
     try:
         # Stop and remove containers with the app name
         import subprocess
+        import tempfile
+        temp_dir = Path(tempfile.gettempdir())
+        compose_dir = temp_dir / f"appstore_{app_id}"
+        
         result = subprocess.run(
-            ['docker-compose', '-p', app_id, 'down'],
+            ['docker', 'compose', '-p', app_id, 'down'],
             capture_output=True,
             text=True,
-            cwd=f"/tmp/appstore_{app_id}"
+            cwd=str(compose_dir)
         )
         
         if result.returncode == 0:
