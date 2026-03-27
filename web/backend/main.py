@@ -335,18 +335,27 @@ class JellyfinHelper:
     
     def get_recent_items(self, limit: int = 10) -> List[Dict]:
         all_items = []
+        num_clients = len(self.clients)
+        
+        if num_clients == 0:
+            return []
+        
+        # Busca mais itens de cada servidor para garantir variedade após ordenação
+        per_client_limit = max(limit, limit * 2 // num_clients) if num_clients > 1 else limit
+        
         for client in self.clients:
             try:
-                items = client.get_recent_items(limit)
+                items = client.get_recent_items(per_client_limit)
                 for item in items:
                     item['_jellyfin_url'] = client.url
                 all_items.extend(items)
             except Exception as e:
                 logger.error(f"Error getting recent items from {client.url}: {e}")
         
-        # Ordena por data de criação
+        # Ordena por data de criação e retorna mais itens quando há múltiplos servidores
         all_items.sort(key=lambda x: x.get('DateCreated', ''), reverse=True)
-        return all_items[:limit]
+        final_limit = limit * num_clients if num_clients > 1 else limit
+        return all_items[:final_limit]
     
     def get_item(self, item_id: str, server_url: str = None) -> Optional[Dict]:
         """Busca um item específico. Se server_url for fornecido, busca apenas naquele servidor."""
