@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSystem } from '../../context/SystemContext'
 import { Film, Tv, Music, RefreshCw, Play, ArrowLeft, ChevronRight, Search, Filter, X } from 'lucide-react'
-import axios from 'axios'
+import axios from '../../utils/axios'
 import MediaPlayer from './MediaPlayer'
 import { getContinueWatching, getItemProgress } from '../../utils/watchProgress'
+import AuthenticatedImage from '../AuthenticatedImage'
 
 const JellyfinApp = () => {
   const { jellyfinItems, fetchJellyfinRecent } = useSystem()
@@ -238,11 +239,10 @@ const JellyfinApp = () => {
 
         {/* Series banner */}
         <div className="relative h-40 rounded-lg overflow-hidden bg-secondary">
-          <img
+          <AuthenticatedImage
             src={buildImageUrl(selectedItem.Id, 'Backdrop', 800, selectedItem)}
             alt={selectedItem.Name}
             className="w-full h-full object-cover opacity-60"
-            onError={(e) => { e.target.style.display = 'none' }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
           <div className="absolute bottom-3 left-4 right-4">
@@ -269,11 +269,10 @@ const JellyfinApp = () => {
                 className="w-full flex items-center gap-3 p-3 bg-secondary hover:bg-secondary/80 rounded-lg transition-colors text-left"
               >
                 <div className="w-16 h-24 rounded overflow-hidden bg-background flex-shrink-0">
-                  <img
+                  <AuthenticatedImage
                     src={buildImageUrl(season.Id, 'Primary', 120, season)}
                     alt={season.Name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.onerror = null; e.target.style.display = 'none' }}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -296,11 +295,10 @@ const JellyfinApp = () => {
                 className="w-full flex items-center gap-3 p-3 bg-secondary hover:bg-secondary/80 rounded-lg transition-colors text-left group"
               >
                 <div className="relative w-28 h-16 rounded overflow-hidden bg-background flex-shrink-0">
-                  <img
+                  <AuthenticatedImage
                     src={buildImageUrl(episode.Id, 'Primary', 200, episode)}
                     alt={episode.Name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.onerror = null; e.target.style.display = 'none' }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Play size={24} className="text-white" />
@@ -425,14 +423,10 @@ const JellyfinApp = () => {
                   className="bg-secondary rounded-lg overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all text-left group"
                 >
                   <div className="relative aspect-video bg-background">
-                    <img
+                    <AuthenticatedImage
                       src={buildImageUrl(item.Id, item.ImageTags?.Primary ? 'Primary' : 'Backdrop', 400, item)}
                       alt={item.Name}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null
-                        e.target.style.display = 'none'
-                      }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="bg-purple-500 p-3 rounded-full">
@@ -478,14 +472,10 @@ const JellyfinApp = () => {
               className="bg-secondary rounded-lg overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all text-left group"
             >
               <div className="relative aspect-video bg-background">
-                <img
+                <AuthenticatedImage
                   src={buildImageUrl(item.Id, item.ImageTags?.Primary ? 'Primary' : 'Backdrop', 400, item)}
                   alt={item.Name}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null
-                    e.target.style.display = 'none'
-                  }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="bg-purple-500 p-3 rounded-full">
