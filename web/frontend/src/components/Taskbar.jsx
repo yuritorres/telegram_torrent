@@ -26,7 +26,7 @@ const Taskbar = () => {
     <div className="taskbar">
       <div className="flex items-center gap-2">
         <div className="bg-primary px-3 py-1 rounded font-bold text-sm">
-          TorrentOS
+          ResolutaHubOs
         </div>
       </div>
 

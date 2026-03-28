@@ -15,7 +15,7 @@ const DockerApp = () => {
   const getStackIcon = (stackName) => {
     const name = (stackName || '').toLowerCase()
     
-    if (name.includes('web') || name.includes('torrentos')) {
+    if (name.includes('web') || name.includes('resolutahubos')) {
       return { icon: Globe, color: 'text-blue-400' }
     }
     if (name.includes('jellyfin') || name.includes('plex')) {

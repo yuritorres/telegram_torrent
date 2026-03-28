@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: torrentos-backend
+    container_name: resolutahubos-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -14,13 +14,13 @@ services:
     env_file:
       - ../.env
     networks:
-      - torrentos-network
+      - resolutahubos-network
 
   web-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: torrentos-frontend
+    container_name: resolutahubos-frontend
     restart: unless-stopped
     ports:
       - "3001:80"
@@ -28,10 +28,10 @@ services:
       - TZ=America/Sao_Paulo
       - VITE_API_URL=http://localhost:8000
     networks:
-      - torrentos-network
+      - resolutahubos-network
     depends_on:
       - web-backend
 
 networks:
-  torrentos-network:
+  resolutahubos-network:
     driver: bridge

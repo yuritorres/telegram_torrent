@@ -1,4 +1,4 @@
-# TorrentOS - Interface Web
+# ResolutaHubOs - Interface Web
 
 Interface web moderna com aparência de sistema operacional para gerenciar sua aplicação Telegram Torrent.
 
