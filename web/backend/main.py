@@ -19,6 +19,9 @@ from typing import List, Optional, Dict
 from datetime import datetime, timedelta
 from pathlib import Path
 from pydantic import BaseModel
+import psutil
+import platform
+import socket
 
 load_dotenv()
 
@@ -1400,6 +1403,117 @@ async def search_telegram_files(query: str, current_user: Dict = Depends(get_cur
         return {"files": results, "total": len(results)}
     except Exception as e:
         logger.error(f"Error searching Telegram files: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
+# System Information Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/system/info")
+async def get_system_info(current_user: Dict = Depends(get_current_user)):
+    """Get system information including CPU, memory, OS, and uptime"""
+    try:
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        boot_time = psutil.boot_time()
+        uptime = datetime.now().timestamp() - boot_time
+        
+        cpu_info = platform.processor() or f"{psutil.cpu_count()} cores"
+        
+        return {
+            "cpu": cpu_info,
+            "cpu_usage": round(cpu_percent, 1),
+            "cpu_count": psutil.cpu_count(),
+            "memory": {
+                "total": memory.total,
+                "used": memory.used,
+                "free": memory.available,
+                "used_percent": round(memory.percent, 1)
+            },
+            "os": f"{platform.system()} {platform.release()}",
+            "platform": platform.platform(),
+            "uptime": int(uptime),
+            "hostname": socket.gethostname()
+        }
+    except Exception as e:
+        logger.error(f"Error getting system info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/system/network")
+async def get_network_info(current_user: Dict = Depends(get_current_user)):
+    """Get network interface information"""
+    try:
+        interfaces = []
+        net_if_addrs = psutil.net_if_addrs()
+        net_if_stats = psutil.net_if_stats()
+        
+        for iface_name, addrs in net_if_addrs.items():
+            if iface_name.startswith('lo'):
+                continue
+                
+            iface_info = {
+                "name": iface_name,
+                "status": "up" if net_if_stats.get(iface_name) and net_if_stats[iface_name].isup else "down",
+                "ip": None,
+                "mac": None
+            }
+            
+            for addr in addrs:
+                if addr.family == socket.AF_INET:
+                    iface_info["ip"] = addr.address
+                elif addr.family == psutil.AF_LINK:
+                    iface_info["mac"] = addr.address
+            
+            if iface_info["ip"] or iface_info["mac"]:
+                interfaces.append(iface_info)
+        
+        return {
+            "interfaces": interfaces,
+            "dns": {
+                "primary": "8.8.8.8",
+                "secondary": "8.8.4.4"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting network info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/system/storage")
+async def get_storage_info(current_user: Dict = Depends(get_current_user)):
+    """Get storage/disk information"""
+    try:
+        disks = []
+        partitions = psutil.disk_partitions()
+        
+        for partition in partitions:
+            if partition.fstype and partition.mountpoint:
+                try:
+                    usage = psutil.disk_usage(partition.mountpoint)
+                    
+                    disk_info = {
+                        "device": partition.device,
+                        "mountpoint": partition.mountpoint,
+                        "fstype": partition.fstype,
+                        "total": usage.total,
+                        "used": usage.used,
+                        "free": usage.free,
+                        "percent": round(usage.percent, 1)
+                    }
+                    
+                    if usage.percent > 90:
+                        disk_info["health"] = "critical"
+                    elif usage.percent > 70:
+                        disk_info["health"] = "warning"
+                    else:
+                        disk_info["health"] = "good"
+                    
+                    disks.append(disk_info)
+                except (PermissionError, OSError):
+                    continue
+        
+        return {"disks": disks}
+    except Exception as e:
+        logger.error(f"Error getting storage info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------------------------------------------
