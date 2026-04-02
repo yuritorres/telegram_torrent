@@ -36,6 +36,7 @@ from auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from telegram_storage import TelegramStorageService
+from user_manager import UserManager
 
 # ---------------------------------------------------------------------------
 # Configuration (read directly from environment variables)
@@ -533,12 +534,15 @@ ws_manager = ConnectionManager()
 # Application state
 # ---------------------------------------------------------------------------
 
+from user_manager import UserManager
+
 class AppState:
     def __init__(self):
         self.qb_sessions: List[Dict] = []
         self.jellyfin: Optional[JellyfinHelper] = None
         self.docker: Optional[DockerHelper] = None
         self.telegram_storage: Optional[TelegramStorageService] = None
+        self.user_manager: Optional[UserManager] = None
 
 app_state = AppState()
 
@@ -577,6 +581,12 @@ async def lifespan(app: FastAPI):
         logger.info("Telegram Storage initialized")
     except Exception as e:
         logger.error(f"Telegram Storage init error: {e}")
+
+    try:
+        app_state.user_manager = UserManager()
+        logger.info("User Manager initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize User Manager: {e}")
 
     asyncio.create_task(broadcast_updates())
     yield
@@ -1514,6 +1524,141 @@ async def get_storage_info(current_user: Dict = Depends(get_current_user)):
         return {"disks": disks}
     except Exception as e:
         logger.error(f"Error getting storage info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
+# User Management Endpoints
+# ---------------------------------------------------------------------------
+
+class UserCreateRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    role: str = 'user'
+
+class UserUpdateRequest(BaseModel):
+    email: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = None
+
+class PasswordChangeRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+@app.get("/api/users")
+async def get_users(current_user: Dict = Depends(get_current_user)):
+    """Get all users"""
+    if not app_state.user_manager:
+        raise HTTPException(status_code=503, detail="User Manager not available")
+    
+    try:
+        users = app_state.user_manager.get_all_users()
+        return {"users": users, "total": len(users)}
+    except Exception as e:
+        logger.error(f"Error getting users: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/users/{user_id}")
+async def get_user(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Get user by ID"""
+    if not app_state.user_manager:
+        raise HTTPException(status_code=503, detail="User Manager not available")
+    
+    try:
+        user = app_state.user_manager.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/users")
+async def create_user(request: UserCreateRequest, current_user: Dict = Depends(get_current_user)):
+    """Create a new user"""
+    if not app_state.user_manager:
+        raise HTTPException(status_code=503, detail="User Manager not available")
+    
+    try:
+        user = app_state.user_manager.create_user(
+            username=request.username,
+            email=request.email,
+            password=request.password,
+            role=request.role
+        )
+        return {"success": True, "user": user}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/users/{user_id}")
+async def update_user(user_id: str, request: UserUpdateRequest, current_user: Dict = Depends(get_current_user)):
+    """Update user information"""
+    if not app_state.user_manager:
+        raise HTTPException(status_code=503, detail="User Manager not available")
+    
+    try:
+        update_data = {k: v for k, v in request.dict().items() if v is not None}
+        user = app_state.user_manager.update_user(user_id, **update_data)
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"success": True, "user": user}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/users/{user_id}")
+async def delete_user(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Delete a user"""
+    if not app_state.user_manager:
+        raise HTTPException(status_code=503, detail="User Manager not available")
+    
+    try:
+        success = app_state.user_manager.delete_user(user_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"success": True, "message": "User deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/users/{user_id}/change-password")
+async def change_password(user_id: str, request: PasswordChangeRequest, current_user: Dict = Depends(get_current_user)):
+    """Change user password"""
+    if not app_state.user_manager:
+        raise HTTPException(status_code=503, detail="User Manager not available")
+    
+    try:
+        success = app_state.user_manager.change_password(
+            user_id=user_id,
+            old_password=request.old_password,
+            new_password=request.new_password
+        )
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"success": True, "message": "Password changed successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error changing password: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------------------------------------------

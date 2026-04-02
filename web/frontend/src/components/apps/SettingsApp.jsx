@@ -15,14 +15,21 @@ const SettingsApp = () => {
   const [systemInfo, setSystemInfo] = useState(null)
   const [networkInfo, setNetworkInfo] = useState(null)
   const [storageInfo, setStorageInfo] = useState(null)
+  const [users, setUsers] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [notification, setNotification] = useState(null)
+  const [showUserDialog, setShowUserDialog] = useState(false)
+  const [editingUser, setEditingUser] = useState(null)
+  const [userFormData, setUserFormData] = useState({ username: '', email: '', password: '', role: 'user' })
 
   useEffect(() => {
     loadSystemInfo()
     loadNetworkInfo()
     loadStorageInfo()
-  }, [])
+    if (activeSection === 'users') {
+      loadUsers()
+    }
+  }, [activeSection])
 
   const loadSystemInfo = async () => {
     try {
@@ -49,6 +56,85 @@ const SettingsApp = () => {
     } catch (error) {
       console.error('Error loading storage info:', error)
     }
+  }
+
+  const loadUsers = async () => {
+    try {
+      const response = await axios.get('/api/users')
+      setUsers(response.data.users || [])
+    } catch (error) {
+      console.error('Error loading users:', error)
+      showNotification('Erro ao carregar usuários', 'error')
+    }
+  }
+
+  const handleCreateUser = async () => {
+    if (!userFormData.username || !userFormData.email || !userFormData.password) {
+      showNotification('Preencha todos os campos', 'error')
+      return
+    }
+
+    try {
+      await axios.post('/api/users', userFormData)
+      showNotification('Usuário criado com sucesso!')
+      setShowUserDialog(false)
+      setUserFormData({ username: '', email: '', password: '', role: 'user' })
+      loadUsers()
+    } catch (error) {
+      showNotification(error.response?.data?.detail || 'Erro ao criar usuário', 'error')
+    }
+  }
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return
+
+    try {
+      const updateData = {
+        email: userFormData.email,
+        role: userFormData.role
+      }
+      if (userFormData.password) {
+        updateData.password = userFormData.password
+      }
+
+      await axios.put(`/api/users/${editingUser.id}`, updateData)
+      showNotification('Usuário atualizado com sucesso!')
+      setShowUserDialog(false)
+      setEditingUser(null)
+      setUserFormData({ username: '', email: '', password: '', role: 'user' })
+      loadUsers()
+    } catch (error) {
+      showNotification(error.response?.data?.detail || 'Erro ao atualizar usuário', 'error')
+    }
+  }
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Deseja realmente excluir este usuário?')) return
+
+    try {
+      await axios.delete(`/api/users/${userId}`)
+      showNotification('Usuário excluído com sucesso!')
+      loadUsers()
+    } catch (error) {
+      showNotification(error.response?.data?.detail || 'Erro ao excluir usuário', 'error')
+    }
+  }
+
+  const openCreateDialog = () => {
+    setEditingUser(null)
+    setUserFormData({ username: '', email: '', password: '', role: 'user' })
+    setShowUserDialog(true)
+  }
+
+  const openEditDialog = (user) => {
+    setEditingUser(user)
+    setUserFormData({
+      username: user.username,
+      email: user.email,
+      password: '',
+      role: user.role
+    })
+    setShowUserDialog(true)
   }
 
   const showNotification = (message, type = 'success') => {
@@ -274,18 +360,33 @@ const SettingsApp = () => {
           <Users className="text-blue-400" />
           Gerenciamento de Usuários
         </h3>
-        <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2 transition-colors">
+        <button 
+          onClick={openCreateDialog}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2 transition-colors"
+        >
           <UserPlus size={18} />
           Adicionar Usuário
         </button>
       </div>
 
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
-        <div className="divide-y divide-gray-700">
-          <UserRow name="Admin" email="admin@telegram-torrent.local" role="Administrador" isActive={true} />
-          <UserRow name="Usuário" email="user@telegram-torrent.local" role="Usuário" isActive={true} />
+      {users.length === 0 ? (
+        <div className="bg-gray-800 rounded-lg p-8 text-center text-gray-400">
+          Nenhum usuário encontrado
         </div>
-      </div>
+      ) : (
+        <div className="bg-gray-800 rounded-lg overflow-hidden">
+          <div className="divide-y divide-gray-700">
+            {users.map((user) => (
+              <UserRow 
+                key={user.id}
+                user={user}
+                onEdit={() => openEditDialog(user)}
+                onDelete={() => handleDeleteUser(user.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -519,6 +620,86 @@ const SettingsApp = () => {
         {activeSection === 'notifications' && renderNotificationsSection()}
         {activeSection === 'about' && renderAboutSection()}
       </div>
+
+      {/* User Create/Edit Dialog */}
+      {showUserDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-700">
+            <h3 className="text-xl font-bold mb-4">
+              {editingUser ? 'Editar Usuário' : 'Novo Usuário'}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Usuário</label>
+                <input
+                  type="text"
+                  value={userFormData.username}
+                  onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
+                  disabled={!!editingUser}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                  placeholder="nome_usuario"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  value={userFormData.email}
+                  onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
+                  placeholder="usuario@exemplo.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  {editingUser ? 'Nova Senha (deixe em branco para manter)' : 'Senha'}
+                </label>
+                <input
+                  type="password"
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Função</label>
+                <select
+                  value={userFormData.role}
+                  onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
+                >
+                  <option value="user">Usuário</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={editingUser ? handleUpdateUser : handleCreateUser}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                {editingUser ? 'Atualizar' : 'Criar'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowUserDialog(false)
+                  setEditingUser(null)
+                  setUserFormData({ username: '', email: '', password: '', role: 'user' })
+                }}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -552,7 +733,7 @@ const ComponentRow = ({ name, version, status }) => (
   </div>
 )
 
-const UserRow = ({ name, email, role, isActive }) => (
+const UserRow = ({ user, onEdit, onDelete }) => (
   <div className="p-4 hover:bg-gray-700/50 transition-colors">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -560,17 +741,32 @@ const UserRow = ({ name, email, role, isActive }) => (
           <User size={20} className="text-white" />
         </div>
         <div>
-          <div className="font-medium">{name}</div>
-          <div className="text-sm text-gray-400">{email}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{user.username}</span>
+            {!user.is_active && (
+              <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded">Inativo</span>
+            )}
+          </div>
+          <div className="text-sm text-gray-400">{user.email}</div>
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-400">{role}</span>
+        <span className="px-3 py-1 bg-gray-700 rounded text-sm">
+          {user.role === 'admin' ? 'Administrador' : 'Usuário'}
+        </span>
         <div className="flex gap-2">
-          <button className="p-2 hover:bg-gray-600 rounded transition-colors">
+          <button 
+            onClick={onEdit}
+            className="p-2 hover:bg-gray-600 rounded transition-colors"
+            title="Editar"
+          >
             <Edit2 size={16} />
           </button>
-          <button className="p-2 hover:bg-red-600 rounded transition-colors">
+          <button 
+            onClick={onDelete}
+            className="p-2 hover:bg-red-600 rounded transition-colors"
+            title="Excluir"
+          >
             <Trash2 size={16} />
           </button>
         </div>
