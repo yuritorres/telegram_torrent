@@ -1311,6 +1311,12 @@ async def create_telegram_file(request: FileCreateRequest, current_user: Dict = 
     if not app_state.telegram_storage:
         raise HTTPException(status_code=503, detail="Telegram Storage not available")
     
+    if not app_state.telegram_storage.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Telegram credentials not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID."
+        )
+    
     try:
         result = app_state.telegram_storage.save_file(
             filename=request.filename,
@@ -1322,6 +1328,8 @@ async def create_telegram_file(request: FileCreateRequest, current_user: Dict = 
             return {"success": True, "file": result}
         else:
             raise HTTPException(status_code=500, detail="Failed to save file to Telegram")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating Telegram file: {e}")
         raise HTTPException(status_code=500, detail=str(e))

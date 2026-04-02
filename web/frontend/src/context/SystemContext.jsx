@@ -20,6 +20,9 @@ export const SystemProvider = ({ children }) => {
   const [ws, setWs] = useState(null)
   const [clipboard, setClipboard] = useState(null)
   const [sharedData, setSharedData] = useState({})
+  const [wallpaper, setWallpaper] = useState(() => {
+    return localStorage.getItem('wallpaper') || 'gradient-1'
+  })
 
   useEffect(() => {
     fetchSystemStatus()
@@ -217,6 +220,12 @@ export const SystemProvider = ({ children }) => {
     return systemEvents.on(event, handler)
   }, [])
 
+  const changeWallpaper = useCallback((wallpaperId) => {
+    setWallpaper(wallpaperId)
+    localStorage.setItem('wallpaper', wallpaperId)
+    systemEvents.emit('wallpaper:changed', { wallpaperId })
+  }, [])
+
   const value = {
     systemStatus,
     torrents,
@@ -242,6 +251,8 @@ export const SystemProvider = ({ children }) => {
     emitEvent,
     onEvent,
     events: SYSTEM_EVENTS,
+    wallpaper,
+    changeWallpaper,
   }
 
   return <SystemContext.Provider value={value}>{children}</SystemContext.Provider>

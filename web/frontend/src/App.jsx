@@ -29,10 +29,10 @@ function AppContent() {
     <NotificationProvider>
       <SystemProvider>
         <Router>
-          <div className="desktop">
+          <>
             <Desktop />
             <Notifications />
-          </div>
+          </>
         </Router>
       </SystemProvider>
     </NotificationProvider>

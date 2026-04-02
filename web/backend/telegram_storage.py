@@ -25,7 +25,8 @@ class TelegramStorageService:
         self.base_url = f"https://api.telegram.org/bot{self.bot_token}"
         
         # Local metadata storage (maps file_id to metadata)
-        self.metadata_file = Path("appstore_data/telegram_files_metadata.json")
+        _base_dir = Path(__file__).parent / "appstore_data"
+        self.metadata_file = _base_dir / "telegram_files_metadata.json"
         self.metadata_file.parent.mkdir(parents=True, exist_ok=True)
         self._load_metadata()
     
@@ -49,6 +50,10 @@ class TelegramStorageService:
         except Exception as e:
             logger.error(f"Error saving metadata: {e}")
     
+    def is_configured(self) -> bool:
+        """Check if Telegram credentials are configured"""
+        return bool(self.bot_token and self.chat_id)
+    
     def save_file(self, filename: str, content: str, file_type: str = "text") -> Optional[Dict]:
         """
         Save a file to Telegram
@@ -61,9 +66,12 @@ class TelegramStorageService:
         Returns:
             Dict with file_id and metadata, or None if failed
         """
+        if not self.is_configured():
+            raise ValueError("Telegram credentials (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) are not configured")
+        
         try:
             # Create temporary file
-            temp_path = Path(f"appstore_data/temp_{filename}")
+            temp_path = Path(__file__).parent / "appstore_data" / f"temp_{filename}"
             temp_path.parent.mkdir(parents=True, exist_ok=True)
             
             with open(temp_path, 'w', encoding='utf-8') as f:
@@ -80,6 +88,8 @@ class TelegramStorageService:
                 }
                 
                 resp = requests.post(url, files=files, data=data, timeout=60)
+                if resp.status_code != 200:
+                    logger.error(f"Telegram API error: {resp.status_code} - {resp.text}")
                 resp.raise_for_status()
                 result = resp.json()
             
@@ -109,7 +119,7 @@ class TelegramStorageService:
             
         except Exception as e:
             logger.error(f"Error saving file to Telegram: {e}")
-            return None
+            raise
     
     def get_file(self, file_id: str) -> Optional[Dict]:
         """

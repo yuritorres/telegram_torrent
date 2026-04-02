@@ -8,10 +8,24 @@ import SystemMonitor from './apps/SystemMonitor'
 import AppStoreApp from './apps/AppStoreApp'
 import FileManagerApp from './apps/FileManagerApp'
 import FileEditor from './FileEditor'
-import { Download, Film, Container, Activity, Store, FolderOpen, FileText } from 'lucide-react'
+import SettingsApp from './apps/SettingsApp'
+import { Download, Film, Container, Activity, Store, FolderOpen, FileText, Settings } from 'lucide-react'
+import { useSystem } from '../context/SystemContext'
 
 const Desktop = () => {
+  const { wallpaper } = useSystem()
   const [openWindows, setOpenWindows] = useState([])
+
+  const wallpaperClasses = {
+    'gradient-1': 'from-slate-900 via-blue-900 to-slate-900',
+    'gradient-2': 'from-purple-900 via-pink-900 to-purple-900',
+    'gradient-3': 'from-emerald-900 via-teal-900 to-emerald-900',
+    'gradient-4': 'from-orange-900 via-red-900 to-orange-900',
+    'gradient-5': 'from-cyan-900 via-blue-900 to-cyan-900',
+    'gradient-6': 'from-gray-900 via-slate-900 to-black',
+    'gradient-7': 'from-indigo-900 via-purple-900 to-pink-900',
+    'gradient-8': 'from-yellow-900 via-orange-900 to-red-900'
+  }
 
   const apps = [
     {
@@ -62,6 +76,13 @@ const Desktop = () => {
       icon: Activity,
       component: SystemMonitor,
       color: 'bg-green-500'
+    },
+    {
+      id: 'settings',
+      name: 'Configurações',
+      icon: Settings,
+      component: SettingsApp,
+      color: 'bg-gray-500'
     }
   ]
 
@@ -83,7 +104,7 @@ const Desktop = () => {
   }
 
   return (
-    <>
+    <div className={`min-h-screen bg-gradient-to-br ${wallpaperClasses[wallpaper] || wallpaperClasses['gradient-1']} p-4 transition-all duration-500`}>
       {openWindows.map(window => (
         <Window
           key={window.id}
@@ -101,7 +122,7 @@ const Desktop = () => {
         openWindows={openWindows}
         onOpenApp={openApp}
       />
-    </>
+    </div>
   )
 }
 

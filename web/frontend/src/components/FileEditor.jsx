@@ -77,7 +77,7 @@ export default function FileEditor() {
     try {
       const response = await axios.post('/api/editor/files', {
         filename: newFileName,
-        content: '',
+        content: '// Novo arquivo\n// Edite aqui...\n',
         file_type: newFileType
       });
       
