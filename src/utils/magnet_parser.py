@@ -126,8 +126,9 @@ def extract_magnet_links(text: str) -> List[MagnetLink]:
         Lista de objetos MagnetLink encontrados
     """
     # Regex melhorado para capturar magnet links completos
-    # Suporta info hash de 40 (hex) ou 32 (base32) caracteres
-    magnet_pattern = r'magnet:\?[^\s<>"]+(?:xt=urn:btih:[0-9a-fA-F]{40}|xt=urn:btih:[0-9a-zA-Z]{32})[^\s<>"]*'
+    # Aceita qualquer magnet link que comece com magnet:? e contenha xt=urn:btih:
+    # em qualquer posição, seguido de hash de 40 (hex) ou 32 (base32) caracteres
+    magnet_pattern = r'magnet:\?[^\s<>"]*xt=urn:btih:(?:[0-9a-fA-F]{40}|[0-9a-zA-Z]{32})[^\s<>"]*'
     
     matches = re.findall(magnet_pattern, text, re.IGNORECASE)
     
