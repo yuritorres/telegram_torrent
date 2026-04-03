@@ -1,0 +1,111 @@
+services:
+  # WhatsApp API (WAHA)
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: waha
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - WHATSAPP_API_HOSTNAME=localhost
+      - WHATSAPP_API_SCHEMA=http
+      - WAHA_BASE_URL=http://localhost:3000
+      - TZ=America/Sao_Paulo
+      - WAHA_API_KEY=${WAHA_API_KEY:-local-dev-key-123}
+      - WAHA_API_KEY_PLAIN=${WAHA_API_KEY:-local-dev-key-123}
+      - WHATSAPP_SESSIONS_POSTGRESQL_URL=postgres://postgres:postgres@postgreswaha:5432/wahadb?sslmode=disable
+      - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
+      - WAHA_DASHBOARD_PASSWORD=${WAHA_DASHBOARD_PASSWORD:-admin123}
+      - WHATSAPP_SWAGGER_ENABLED=true
+      - WHATSAPP_SWAGGER_USERNAME=${WAHA_SWAGGER_USERNAME:-admin}
+      - WHATSAPP_SWAGGER_PASSWORD=${WAHA_SWAGGER_PASSWORD:-swagger123}
+      - WAHA_WORKER_ID=waha-local
+      - WAHA_WORKER_RESTART_SESSIONS=true
+      - WAHA_RESTART_ALL_SESSIONS=true
+      - WAHA_AUTO_START_DELAY_SECONDS=5
+      - WHATSAPP_RESTART_ALL_SESSIONS=true
+      - WHATSAPP_START_SESSION=default
+      - WHATSAPP_DEFAULT_ENGINE=GOWS
+      - WAHA_APPS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+      - WAHA_APPS_JOBS_CONCURRENCY=10
+      - WAHA_APPS_JOBS_REMOVE_ON_COMPLETE_AGE=259200
+      - WAHA_APPS_JOBS_REMOVE_ON_COMPLETE_COUNT=1000
+      - WAHA_APPS_JOBS_REMOVE_ON_FAIL_AGE=2678400
+      - WAHA_APPS_JOBS_REMOVE_ON_FAIL_COUNT=1000
+      - WHATSAPP_HOOK_URL=http://telegram-torrent:5000/whatsapp/webhook
+      - WHATSAPP_HOOK_EVENTS=*
+    volumes:
+      - waha_sessions:/app/.sessions
+      - waha_media:/app/.media
+    depends_on:
+      postgreswaha:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    networks:
+      - telegram-torrent-network
+
+  # PostgreSQL para WAHA
+  postgreswaha:
+    image: postgres:17
+    container_name: postgreswaha
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - TZ=America/Sao_Paulo
+      - POSTGRES_DB=wahadb
+      - PG_MAX_CONNECTIONS=100
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - telegram-torrent-network
+    volumes:
+      - postgres_datawaha:/var/lib/postgresql/data
+
+  # Redis para WAHA
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: [
+      "redis-server",
+      "--appendonly",
+      "yes",
+      "--port",
+      "6379"
+    ]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - telegram-torrent-network
+
+volumes:
+  postgres_datawaha:
+    driver: local
+  redis_data:
+    driver: local
+  waha_sessions:
+    driver: local
+  waha_media:
+    driver: local
+
+networks:
+  telegram-torrent-network:
+    external: true
