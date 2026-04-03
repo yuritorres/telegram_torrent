@@ -223,6 +223,7 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     - /start - Mostrar esta mensagem
                     - /qespaco - Mostrar espaço em disco
                     - /qtorrents - Listar torrents ativos
+                    - /magnet - Adicionar torrent via magnet link
                     - /recent - Ver itens recentes do Jellyfin
                     - /recentes - Ver itens recentemente adicionados (detalhado)
                     - /libraries - Listar bibliotecas do Jellyfin
@@ -295,6 +296,27 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                         continue
                     status_text = jellyfin_manager.get_status_text()
                     send_telegram(status_text, chat_id, parse_mode="Markdown", use_keyboard=True)
+                    continue
+
+                elif text == "/magnet":
+                    if not is_authorized:
+                        send_telegram("❌ Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
+                        continue
+                    magnet_help = """
+🧲 *Adicionar Torrent via Magnet Link*
+
+*Como usar:*
+• Envie um magnet link após este comando
+• Exemplo: `/magnet magnet:?xt=urn:btih:...`
+• Ou simplesmente envie o magnet link diretamente
+
+*Formatos suportados:*
+• magnet:?xt=urn:btih:[hash de 40 caracteres]
+• magnet:?xt=urn:btih:[hash de 32 caracteres]
+• Com parâmetros adicionais (dn, xl, tr, etc.)
+
+📝 *Dica:* Você pode enviar o magnet link diretamente sem usar o comando!"""
+                    send_telegram(magnet_help, chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
 
                 elif text == "/youtube":

@@ -16,6 +16,7 @@ def set_bot_commands() -> None:
         {"command": "start", "description": "Iniciar o bot"},
         {"command": "qespaco", "description": "Mostrar espaço em disco"},
         {"command": "qtorrents", "description": "Listar torrents"},
+        {"command": "magnet", "description": "Adicionar torrent via magnet link"},
         {"command": "recent", "description": "Ver itens recentes do Jellyfin"},
         {"command": "recentes", "description": "Ver itens recentemente adicionados (detalhado)"},
         {"command": "libraries", "description": "Listar bibliotecas do Jellyfin"},
