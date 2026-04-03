@@ -144,6 +144,36 @@ def qb_action(session: req_lib.Session, url: str, action: str, torrent_hash: str
         logger.error(f"Error {action} torrent {torrent_hash}: {e}")
         return False
 
+
+def qb_get_storage_info(session: req_lib.Session, url: str) -> Dict:
+    """Obtém informações de armazenamento de uma instância do qBittorrent"""
+    try:
+        # Obter informações do servidor
+        resp = session.get(f"{url}/api/v2/sync/maindata", timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        server_state = data.get("server_state", {})
+        free_space = server_state.get("free_space_on_disk", 0)
+        
+        # Obter todos os torrents para calcular espaço usado
+        torrents_resp = session.get(f"{url}/api/v2/torrents/info", timeout=10)
+        torrents_resp.raise_for_status()
+        torrents = torrents_resp.json()
+        
+        # Somar o tamanho de todos os torrents
+        used_space = sum(torrent.get("size", 0) for torrent in torrents)
+        total_space = free_space + used_space
+        
+        return {
+            "total": total_space,
+            "used": used_space,
+            "free": free_space,
+        }
+    except Exception as e:
+        logger.error(f"Error getting storage info from {url}: {e}")
+        return {"total": 0, "used": 0, "free": 0}
+
 # ---------------------------------------------------------------------------
 # Lightweight Jellyfin helpers
 # ---------------------------------------------------------------------------
@@ -710,6 +740,19 @@ async def verify_auth(current_user: Dict = Depends(get_current_user)):
 @app.get("/api/system/status")
 async def get_system_status(current_user: Dict = Depends(get_current_user)):
     connected_qb = any(i['session'] is not None for i in app_state.qb_sessions)
+    
+    # Coletar informações de armazenamento de todas as instâncias
+    total_storage = 0
+    used_storage = 0
+    free_storage = 0
+    
+    for inst in app_state.qb_sessions:
+        if inst['session'] is not None:
+            storage_info = qb_get_storage_info(inst['session'], inst['url'])
+            total_storage += storage_info['total']
+            used_storage += storage_info['used']
+            free_storage += storage_info['free']
+    
     return {
         "qbittorrent": {
             "connected": connected_qb,
@@ -722,6 +765,11 @@ async def get_system_status(current_user: Dict = Depends(get_current_user)):
         },
         "docker": {
             "available": app_state.docker is not None and app_state.docker.is_available(),
+        },
+        "storage": {
+            "total": total_storage,
+            "used": used_storage,
+            "free": free_storage,
         },
         "timestamp": datetime.now().isoformat(),
     }

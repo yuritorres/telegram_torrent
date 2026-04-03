@@ -3,10 +3,7 @@ import { useSystem } from '../../context/SystemContext'
 import { Activity, HardDrive, Cpu, Database } from 'lucide-react'
 
 const SystemMonitor = () => {
-  const { systemStatus, torrents } = useSystem()
-
-  const totalSize = torrents.reduce((acc, t) => acc + (t.size || 0), 0)
-  const totalDownloaded = torrents.reduce((acc, t) => acc + (t.downloaded || 0), 0)
+  const { systemStatus } = useSystem()
 
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 B'
@@ -50,8 +47,8 @@ const SystemMonitor = () => {
             <span className="font-semibold">Armazenamento</span>
           </div>
           <div className="text-sm space-y-1">
-            <div>Total: {formatBytes(totalSize)}</div>
-            <div>Baixado: {formatBytes(totalDownloaded)}</div>
+            <div>Total: {formatBytes(systemStatus?.storage?.total || 0)}</div>
+            <div>Baixado: {formatBytes(systemStatus?.storage?.used || 0)}</div>
           </div>
         </div>
 
