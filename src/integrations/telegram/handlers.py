@@ -298,11 +298,16 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
                     send_telegram(status_text, chat_id, parse_mode="Markdown", use_keyboard=True)
                     continue
 
-                elif text == "/magnet":
+                elif text.startswith("/magnet"):
                     if not is_authorized:
                         send_telegram("❌ Você não tem permissão para executar este comando.", chat_id, use_keyboard=True)
                         continue
-                    magnet_help = """
+                    
+                    # Extrair o magnet link do comando
+                    parts = text.split(maxsplit=1)
+                    if len(parts) < 2:
+                        # Sem magnet link fornecido, mostrar ajuda
+                        magnet_help = """
 🧲 *Adicionar Torrent via Magnet Link*
 
 *Como usar:*
@@ -316,7 +321,47 @@ def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, je
 • Com parâmetros adicionais (dn, xl, tr, etc.)
 
 📝 *Dica:* Você pode enviar o magnet link diretamente sem usar o comando!"""
-                    send_telegram(magnet_help, chat_id, parse_mode="Markdown", use_keyboard=True)
+                        send_telegram(magnet_help, chat_id, parse_mode="Markdown", use_keyboard=True)
+                        continue
+                    
+                    # Processar o magnet link fornecido
+                    magnet_text = parts[1]
+                    from src.utils.magnet_parser import extract_magnet_links, format_magnet_info
+                    
+                    magnet_links = extract_magnet_links(magnet_text)
+                    
+                    if not magnet_links:
+                        send_telegram("❌ Magnet link inválido. Verifique o formato e tente novamente.", chat_id, use_keyboard=True)
+                        continue
+                    
+                    for magnet_obj in magnet_links:
+                        try:
+                            # Mostrar informações do torrent antes de adicionar
+                            info_msg = format_magnet_info(magnet_obj)
+                            send_telegram(
+                                f"{info_msg}\n\n⏳ Adicionando torrent, aguarde...",
+                                chat_id,
+                                parse_mode="HTML"
+                            )
+                            
+                            if multi_instance_manager:
+                                from src.commands.multi_instance_commands import handle_add_magnet_multi
+                                handle_add_magnet_multi(magnet_obj.raw_link, chat_id)
+                            else:
+                                result = add_magnet_func(sess, qb_url, magnet_obj.raw_link)
+                                if result:
+                                    send_telegram(
+                                        f"✅ <b>Torrent adicionado com sucesso!</b>\n\n"
+                                        f"📝 {magnet_obj.get_display_name()}",
+                                        chat_id,
+                                        parse_mode="HTML",
+                                        use_keyboard=True
+                                    )
+                                else:
+                                    send_telegram("❌ Falha ao adicionar o torrent.", chat_id, use_keyboard=True)
+                        except Exception as e:
+                            logger.error(f"Erro ao adicionar magnet link via comando /magnet: {e}")
+                            send_telegram(f"❌ Erro ao adicionar torrent: {str(e)}", chat_id, use_keyboard=True)
                     continue
 
                 elif text == "/youtube":
