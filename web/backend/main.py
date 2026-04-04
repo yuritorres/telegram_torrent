@@ -328,9 +328,11 @@ class JellyfinClient:
 
     def get_stream_url(self, item_id: str, audio_stream_index: int = None) -> str:
         token = self.api_key or self.access_token or ''
+        # Direct stream - EAC3 audio codec is not supported by browsers
+        # For audio support, media files need AAC, MP3, or Opus audio codec
         url = f"{self.url}/Videos/{item_id}/stream?static=true&api_key={token}"
         if audio_stream_index is not None:
-            url += f"&audioStreamIndex={audio_stream_index}"
+            url += f"&AudioStreamIndex={audio_stream_index}"
         return url
 
     def get_subtitle_url(self, item_id: str, media_source_id: str, index: int) -> str:
