@@ -256,16 +256,25 @@ export function useFileSystemInternal() {
         }
     }, [history, historyIndex, activeWorkspace]);
 
-    const navigateToPath = useCallback((path) => {
+    const normalizePath = useCallback((pathInput) => {
+        if (Array.isArray(pathInput)) return pathInput;
+        if (!pathInput) return [];
+
+        // Wrap special destinations (recent, favorites, etc.) into a pseudo path entry
+        return [{ id: pathInput, name: pathInput, isVirtual: true }];
+    }, []);
+
+    const navigateToPath = useCallback((pathInput) => {
+        const normalizedPath = normalizePath(pathInput);
         const newHistory = history.slice(0, historyIndex + 1);
-        newHistory.push(path);
+        newHistory.push(normalizedPath);
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
-        setCurrentPath(path);
+        setCurrentPath(normalizedPath);
 
-        const folderId = path.length > 0 ? path[path.length - 1].id : null;
+        const folderId = normalizedPath.length > 0 ? normalizedPath[normalizedPath.length - 1].id : null;
         updateHash(activeWorkspace, folderId);
-    }, [history, historyIndex, activeWorkspace]);
+    }, [history, historyIndex, activeWorkspace, normalizePath]);
 
     const navigateUp = useCallback(() => {
         if (currentPath.length > 1) {
