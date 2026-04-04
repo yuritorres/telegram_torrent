@@ -305,13 +305,25 @@ export function useFileSystemInternal() {
     // --- ACTIONS (CRUD com IndexedDB) ---
 
     // 1. Create Workspace
-    const createWorkspace = async (name, connections) => {
+    const createWorkspace = async (name, connections = []) => {
+        const resolvedConnections = Array.isArray(connections) ? connections : [];
+
+        if (resolvedConnections.length === 0) {
+            resolvedConnections.push({
+                id: `conn-${Date.now()}`,
+                serviceId: 'browser',
+                name: 'Navegador',
+                used: '0',
+                total: '500MB'
+            });
+        }
+
         const newWs = {
             id: `ws-${Date.now()}`, // String ID Explícito
             name,
             type: 'local',
             color: 'bg-blue-600',
-            connections
+            connections: resolvedConnections
         };
 
         try {
@@ -320,8 +332,8 @@ export function useFileSystemInternal() {
             setWorkspaces(prev => [...prev, newWs]);
             setActiveWorkspace(newWs.id);
 
-            if (connections.length > 0) {
-                const first = connections[0];
+            if (resolvedConnections.length > 0) {
+                const first = resolvedConnections[0];
                 const path = [{ id: first.id, name: first.name }];
                 setCurrentPath(path);
                 setHistory([path]);
@@ -432,8 +444,13 @@ export function useFileSystemInternal() {
                 let isConnectionRoot = false;
 
                 // SPECIAL CASE: Connection Root
-                if (activeWorkspaceObj?.connections?.some(c => c.id === currentFolderId)) {
-                    fetchId = null; // 'root' for the provider
+                // For IndexedDB/browser provider, children are stored with parentId = connectionId,
+                // so we must query by connectionId (not null) to show newly created folders immediately.
+                const isConnectionRootPath = activeWorkspaceObj?.connections?.some(c => c.id === currentFolderId);
+                const isIndexedDBProvider = provider?.constructor?.name === 'IndexedDBProvider';
+
+                if (isConnectionRootPath && !isIndexedDBProvider) {
+                    fetchId = null; // remote providers generally use null/root
                     isConnectionRoot = true;
                 }
 
@@ -474,13 +491,16 @@ export function useFileSystemInternal() {
             const newFolder = await provider.createFolder(name, currentFolderId);
             setFiles(prev => [...prev, newFolder]);
             toast.success("Pasta criada!");
+
+            // Ensure the list reflects the newly created folder even if a previous load overwrote state
+            await loadFiles();
         } catch (error) {
             console.error("Erro ao criar pasta:", error);
             toast.error("Erro ao criar pasta.");
         } finally {
             setIsProcessing(false);
         }
-    }, [currentFolderId, provider]);
+    }, [currentFolderId, provider, loadFiles]);
 
     // 3. Soft Delete Files (Move to Local Trash)
     const deleteFiles = useCallback(async (ids) => {
