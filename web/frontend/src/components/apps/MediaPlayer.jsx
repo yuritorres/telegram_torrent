@@ -55,6 +55,13 @@ const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) 
         if (sources.length > 0) {
           const source = sources[0]
           setMediaSourceId(source.Id)
+          
+          // Set duration from Jellyfin metadata (in ticks, convert to seconds)
+          if (source.RunTimeTicks) {
+            const durationInSeconds = source.RunTimeTicks / 10000000
+            setDuration(durationInSeconds)
+          }
+          
           const streams = source.MediaStreams || []
           const audio = streams.filter(s => s.Type === 'Audio').map(s => ({
             index: s.Index,
