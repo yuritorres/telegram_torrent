@@ -28,7 +28,7 @@ const GAP = 16;
 const LIST_ITEM_HEIGHT = 48;
 
 const GridItem = memo(({ columnIndex, rowIndex, style, data }) => {
-    const { files, isLoading, columnCount, selectedFileIds, onNavigate, onContextMenu, onSelect, focusedIndex, tags = [], cutFileIds = new Set(), copiedFileIds = new Set() } = data;
+    const { files = [], isLoading, columnCount, selectedFileIds = [], onNavigate, onContextMenu, onSelect, focusedIndex, tags = [], cutFileIds = new Set(), copiedFileIds = new Set() } = data;
     const index = rowIndex * columnCount + columnIndex;
     const file = files[index];
 
@@ -139,7 +139,7 @@ const GridItem = memo(({ columnIndex, rowIndex, style, data }) => {
 });
 
 const ListItem = memo(({ index, style, data }) => {
-    const { files, isLoading, selectedFileIds, onNavigate, onContextMenu, onSelect, focusedIndex, tags = [], cutFileIds = new Set(), copiedFileIds = new Set() } = data;
+    const { files = [], isLoading, selectedFileIds = [], onNavigate, onContextMenu, onSelect, focusedIndex, tags = [], cutFileIds = new Set(), copiedFileIds = new Set() } = data;
 
     const file = files[index];
     const isSelected = selectedFileIds.includes(file?.id);

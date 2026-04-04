@@ -18,6 +18,9 @@ export function useFileSystemInternal() {
     const [previewFile, setPreviewFile] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // Ensure files is always an array
+    const safeFiles = useMemo(() => Array.isArray(files) ? files : [], [files]);
+
     const toast = useToast();
 
     const activeWorkspaceObj = useMemo(() =>
@@ -1456,7 +1459,7 @@ export function useFileSystemInternal() {
     return {
         appState, setAppState,
         workspaces, activeWorkspace, activeWorkspaceObj,
-        files, setFiles,
+        files: safeFiles, setFiles,
         currentPath, historyIndex, history,
         previewFile, setPreviewFile,
         currentFolderId,

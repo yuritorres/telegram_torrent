@@ -334,10 +334,11 @@ const AppLayout = () => {
                             files={displayedFiles}
                             viewMode={viewMode}
                             sortConfig={sortConfig}
-                            onRequestSort={handleRequestSort}
+                            requestSort={handleRequestSort}
                             selectedFileIds={selectedFileIds}
-                            onFileSelect={handleFileSelect}
-                            onFileOpen={(file) => {
+                            onSelect={handleFileSelect}
+                            onSelectRange={(ids) => setSelectedFileIds(ids)}
+                            onNavigate={(file) => {
                                 if (file.type === 'folder' || file.isConnection) {
                                     navigate(file.id);
                                     clearSelection();
@@ -349,6 +350,17 @@ const AppLayout = () => {
                                 e.preventDefault();
                                 setContextMenu({ x: e.clientX, y: e.clientY, file });
                             }}
+                            tags={tags}
+                            onCreateFolder={() => {
+                                openInput({
+                                    title: 'Nova Pasta',
+                                    placeholder: 'Nome da pasta',
+                                    onConfirm: (name) => createFolder(name, currentFolderId)
+                                });
+                            }}
+                            onUpload={(files) => addFiles(files, currentFolderId)}
+                            onRefresh={loadSystem}
+                            isTrash={currentFolderId === 'trash'}
                         />
                     </div>
                 </div>
