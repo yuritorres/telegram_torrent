@@ -1,0 +1,65 @@
+{
+    "sidebar": {
+        "workspace": "WORKSPACE",
+        "workspaceSettings": "Workspace Settings",
+        "connections": "CONNECTIONS",
+        "navigation": "NAVIGATION",
+        "favorites": "FAVORITES",
+        "home": "Home",
+        "recent": "Recent",
+        "tags": "TAGS",
+        "trash": "Trash",
+        "settings": "Settings",
+        "newWorkspace": "New Workspace",
+        "openLocalFolder": "Open Local Folder",
+        "noConnections": "No connections."
+    },
+    "header": {
+        "searchPlaceholder": "Search files...",
+        "newFolder": "New Folder"
+    },
+    "grid": {
+        "emptyTitle": "This folder is empty",
+        "emptyDesc": "Start by adding files or creating a new folder.",
+        "emptyTrashTitle": "Trash is empty",
+        "emptyTrashDesc": "Deleted files will appear here.",
+        "emptyState": "This folder is empty. Drag files or right-click.",
+        "listHeader": {
+            "name": "NAME",
+            "type": "TYPE",
+            "size": "SIZE",
+            "date": "MODIFIED"
+        }
+    },
+    "ctx": {
+        "open": "Open",
+        "download": "Download",
+        "rename": "Rename",
+        "delete": "Delete",
+        "newFolder": "New Folder",
+        "upload": "Upload Files",
+        "refresh": "Refresh",
+        "properties": "Properties",
+        "copy": "Copy",
+        "cut": "Cut",
+        "paste": "Paste",
+        "star": "Star Selection",
+        "restore": "Restore",
+        "deletePermanent": "Delete Permanently",
+        "emptyTrash": "Empty Trash"
+    },
+    "modals": {
+        "renameTitle": "Rename",
+        "deleteTitle": "Delete File",
+        "deleteMessage": "Are you sure you want to delete \"{{name}}\"?",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "download": "Download"
+    },
+    "loading": "Loading...",
+    "error": {
+        "title": "System Loading Error",
+        "desc": "A problem occurred while accessing the database.",
+        "retry": "Reload Application"
+    }
+}

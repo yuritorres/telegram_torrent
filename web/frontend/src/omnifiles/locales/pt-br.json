@@ -1,0 +1,65 @@
+{
+    "sidebar": {
+        "workspace": "WORKSPACE",
+        "workspaceSettings": "Configurações do Workspace",
+        "connections": "CONEXÕES",
+        "navigation": "NAVEGAÇÃO",
+        "favorites": "FAVORITOS",
+        "home": "Início",
+        "recent": "Recentes",
+        "tags": "TAGS",
+        "trash": "Lixeira",
+        "settings": "Configurações",
+        "newWorkspace": "Novo Workspace",
+        "openLocalFolder": "Abrir Pasta Local",
+        "noConnections": "Nenhuma conexão."
+    },
+    "header": {
+        "searchPlaceholder": "Buscar arquivos...",
+        "newFolder": "Nova Pasta"
+    },
+    "grid": {
+        "emptyTitle": "Esta pasta está vazia",
+        "emptyDesc": "Comece por adicionar ficheiros ou criar uma nova organização.",
+        "emptyTrashTitle": "A Lixeira está vazia",
+        "emptyTrashDesc": "Arquivos excluídos aparecerão aqui.",
+        "emptyState": "Esta pasta está vazia. Arraste ficheiros ou clique com o botão direito.",
+        "listHeader": {
+            "name": "NOME",
+            "type": "TIPO",
+            "size": "TAMANHO",
+            "date": "MODIFICADO"
+        }
+    },
+    "ctx": {
+        "open": "Abrir",
+        "download": "Baixar",
+        "rename": "Renomear",
+        "delete": "Deletar",
+        "newFolder": "Nova Pasta",
+        "upload": "Carregar Arquivos",
+        "refresh": "Atualizar",
+        "properties": "Propriedades",
+        "copy": "Copiar",
+        "cut": "Recortar",
+        "paste": "Colar",
+        "star": "Favoritar Seleção",
+        "restore": "Restaurar",
+        "deletePermanent": "Excluir Permanentemente",
+        "emptyTrash": "Esvaziar Lixeira"
+    },
+    "modals": {
+        "renameTitle": "Renomear",
+        "deleteTitle": "Eliminar Arquivo",
+        "deleteMessage": "Tem certeza que deseja eliminar \"{{name}}\"?",
+        "confirm": "Confirmar",
+        "cancel": "Cancelar",
+        "download": "Baixar"
+    },
+    "loading": "Carregando...",
+    "error": {
+        "title": "Erro ao carregar o sistema",
+        "desc": "Ocorreu um problema ao acessar o banco de dados.",
+        "retry": "Recarregar Aplicação"
+    }
+}
