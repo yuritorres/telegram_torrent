@@ -234,7 +234,16 @@ const AppLayout = () => {
     }, [selectedFileIds, files, copy, cut, paste]);
 
     if (appState === 'welcome') {
-        return <WelcomeScreen onComplete={() => setAppState('setup')} />;
+        return (
+            <WelcomeScreen 
+                onQuickStart={async () => {
+                    // Quick start: create default workspace and go to ready state
+                    await createWorkspace('Meu Workspace');
+                    setAppState('ready');
+                }}
+                onStart={() => setAppState('setup')} 
+            />
+        );
     }
 
     if (appState === 'setup') {
