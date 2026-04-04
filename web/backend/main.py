@@ -336,6 +336,15 @@ class JellyfinClient:
             url += f"&AudioStreamIndex={audio_stream_index}"
         return url
 
+    def get_transcode_url(self, item_id: str, audio_stream_index: int = None) -> str:
+        token = self.api_key or self.access_token or ''
+        # Force audio transcoding from EAC3 to AAC for browser compatibility
+        # This endpoint tells Jellyfin to transcode audio on-the-fly
+        url = f"{self.url}/Videos/{item_id}/stream?static=false&api_key={token}&AudioCodec=aac&AudioBitrate=384000&MaxAudioChannels=2"
+        if audio_stream_index is not None:
+            url += f"&AudioStreamIndex={audio_stream_index}"
+        return url
+
     def get_subtitle_url(self, item_id: str, media_source_id: str, index: int) -> str:
         token = self.api_key or self.access_token or ''
         return f"{self.url}/Videos/{item_id}/{media_source_id}/Subtitles/{index}/0/Stream.vtt?api_key={token}"
@@ -471,6 +480,12 @@ class JellyfinHelper:
         clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
         if clients_to_search:
             return clients_to_search[0].get_stream_url(item_id, audio_stream_index)
+        return ''
+    
+    def get_transcode_url(self, item_id: str, server_url: str = None, audio_stream_index: int = None) -> str:
+        clients_to_search = [c for c in self.clients if c.url == server_url] if server_url else self.clients
+        if clients_to_search:
+            return clients_to_search[0].get_transcode_url(item_id, audio_stream_index)
         return ''
     
     def get_subtitle_url(self, item_id: str, media_source_id: str, index: int, server_url: str = None) -> str:
@@ -941,11 +956,17 @@ async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int, 
 
 
 @app.get("/api/jellyfin/stream/{item_id}")
-async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None, server_url: str = None, token: str = None, current_user: Dict = Depends(get_current_user_optional)):
+async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None, server_url: str = None, token: str = None, transcode: bool = False, current_user: Dict = Depends(get_current_user_optional)):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
-    stream_url = jf.get_stream_url(item_id, server_url=server_url, audio_stream_index=audioStreamIndex)
+    
+    # If transcode is requested, use transcoding endpoint
+    if transcode:
+        stream_url = jf.get_transcode_url(item_id, server_url=server_url, audio_stream_index=audioStreamIndex)
+    else:
+        stream_url = jf.get_stream_url(item_id, server_url=server_url, audio_stream_index=audioStreamIndex)
+    
     headers = {}
     if 'range' in request.headers:
         headers['Range'] = request.headers['range']
