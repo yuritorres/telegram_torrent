@@ -304,14 +304,14 @@ const AppLayout = () => {
                         currentPath={currentPath}
                         onNavigateDrive={navigate}
                         isOpen={isSidebarOpen}
-                        onGoHome={() => navigate(null)}
-                        onGoRecent={() => navigate('recent')}
-                        onGoFavorites={() => navigate('favorites')}
+                        onGoHome={() => navigateToPath(null)}
+                        onGoRecent={() => navigateToPath('recent')}
+                        onGoFavorites={() => navigateToPath('favorites')}
                         onOpenLocal={openLocalFolder}
                         tags={tags}
                         activeTagId={activeTagId}
-                        onNavigateTag={(tagId) => navigate(`tag-${tagId}`)}
-                        onGoTrash={() => navigate('trash')}
+                        onNavigateTag={(tagId) => navigateToPath(`tag-${tagId}`)}
+                        onGoTrash={() => navigateToPath('trash')}
                     />
                 )}
 
@@ -363,7 +363,7 @@ const AppLayout = () => {
                             onSelectRange={(ids) => setSelectedFileIds(ids)}
                             onNavigate={(file) => {
                                 if (file.type === 'folder' || file.isConnection) {
-                                    navigate(file.id);
+                                    navigate(file);
                                     clearSelection();
                                 } else {
                                     setPreviewFile(file);
@@ -381,7 +381,10 @@ const AppLayout = () => {
                                     onConfirm: (name) => createFolder(name, currentFolderId)
                                 });
                             }}
-                            onUpload={(files) => addFiles(files, currentFolderId)}
+                            onUpload={(fileList) => {
+                                const filesArray = Array.from(fileList);
+                                addFiles(filesArray, currentFolderId);
+                            }}
                             onRefresh={loadSystem}
                             isTrash={currentFolderId === 'trash'}
                         />
