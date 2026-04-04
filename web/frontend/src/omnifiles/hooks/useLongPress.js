@@ -18,7 +18,9 @@ export const useLongPress = (
             }
             timeout.current = setTimeout(() => {
                 longPressTriggered.current = true;
-                onLongPress(event);
+                if (typeof onLongPress === 'function') {
+                    onLongPress(event);
+                }
             }, delay);
         },
         [onLongPress, delay, shouldPreventDefault]

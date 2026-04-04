@@ -318,10 +318,11 @@ const AppLayout = () => {
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <Header
                         viewMode={viewMode}
-                        onViewModeChange={handleSetViewMode}
+                        setViewMode={handleSetViewMode}
                         searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
+                        setSearchQuery={setSearchQuery}
                         selectedCount={selectedFileIds.length}
+                        onClearSelection={clearSelection}
                         onUpload={(files) => addFiles(files, currentFolderId)}
                         onCreateFolder={() => {
                             openInput({
@@ -331,15 +332,18 @@ const AppLayout = () => {
                             });
                         }}
                         onDelete={() => deleteFiles(selectedFileIds)}
+                        onOpenTagManager={() => setShowTagManager(true)}
                         onToggleSidebar={toggleSidebar}
+                        isSidebarOpen={isSidebarOpen}
                         onToggleDetails={toggleDetails}
                         showDetails={showDetails}
+                        isProcessing={isProcessing}
                         currentPath={currentPath}
                         onNavigateBreadcrumb={navigateBreadcrumb}
-                        onNavigateBack={navigateBack}
-                        onNavigateForward={navigateForward}
-                        canGoBack={historyIndex > 0}
-                        canGoForward={historyIndex < history.length - 1}
+                        onBack={navigateBack}
+                        onForward={navigateForward}
+                        historyIndex={historyIndex}
+                        historyLength={history.length}
                         onRefresh={loadSystem}
                     />
 

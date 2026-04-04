@@ -3,6 +3,7 @@ import { db } from '../db';
 import { useToast } from './useToast';
 import { getProvider } from '../providers/ProviderFactory';
 import { GoogleDriveProvider } from '../providers/GoogleDriveProvider';
+import { IndexedDBProvider } from '../providers/IndexedDBProvider';
 import { useFileProcessor } from './useFileProcessor';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -447,7 +448,7 @@ export function useFileSystemInternal() {
                 // For IndexedDB/browser provider, children are stored with parentId = connectionId,
                 // so we must query by connectionId (not null) to show newly created folders immediately.
                 const isConnectionRootPath = activeWorkspaceObj?.connections?.some(c => c.id === currentFolderId);
-                const isIndexedDBProvider = provider?.constructor?.name === 'IndexedDBProvider';
+                const isIndexedDBProvider = provider instanceof IndexedDBProvider;
 
                 if (isConnectionRootPath && !isIndexedDBProvider) {
                     fetchId = null; // remote providers generally use null/root
