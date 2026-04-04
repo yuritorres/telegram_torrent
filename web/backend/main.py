@@ -328,22 +328,17 @@ class JellyfinClient:
 
     def get_stream_url(self, item_id: str, audio_stream_index: int = None) -> str:
         token = self.api_key or self.access_token or ''
-        # Use direct stream - browsers will play video without audio for EAC3 codec
-        # For full audio support, media files should use AAC, MP3, or Opus audio codec
-        # Or enable Jellyfin server-side transcoding in Dashboard -> Playback settings
-        url = f"{self.url}/Videos/{item_id}/stream?static=true&api_key={token}"
+        # Always request transcoded/decoded stream from Jellyfin
+        # Jellyfin will automatically transcode EAC3 to AAC for browser compatibility
+        # static=false allows Jellyfin to transcode when needed
+        url = f"{self.url}/Videos/{item_id}/stream?static=false&api_key={token}&AudioCodec=aac&AudioBitrate=384000&MaxAudioChannels=2&VideoCodec=h264,hevc&VideoBitrate=120000000"
         if audio_stream_index is not None:
             url += f"&AudioStreamIndex={audio_stream_index}"
         return url
 
     def get_transcode_url(self, item_id: str, audio_stream_index: int = None) -> str:
-        token = self.api_key or self.access_token or ''
-        # Force audio transcoding from EAC3 to AAC for browser compatibility
-        # This endpoint tells Jellyfin to transcode audio on-the-fly
-        url = f"{self.url}/Videos/{item_id}/stream?static=false&api_key={token}&AudioCodec=aac&AudioBitrate=384000&MaxAudioChannels=2"
-        if audio_stream_index is not None:
-            url += f"&AudioStreamIndex={audio_stream_index}"
-        return url
+        # Same as get_stream_url - always use transcoded output
+        return self.get_stream_url(item_id, audio_stream_index)
 
     def get_subtitle_url(self, item_id: str, media_source_id: str, index: int) -> str:
         token = self.api_key or self.access_token or ''

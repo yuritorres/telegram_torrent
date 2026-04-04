@@ -23,7 +23,7 @@ const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) 
   const [selectedSubtitle, setSelectedSubtitle] = useState(-1)
   const [showSettingsMenu, setShowSettingsMenu] = useState(null)
 
-  const buildStreamUrl = useCallback((audioIdx, needsTranscode = false) => {
+  const buildStreamUrl = useCallback((audioIdx) => {
     let url = `/api/jellyfin/stream/${itemId}`
     const params = []
     if (audioIdx !== null && audioIdx !== undefined) {
@@ -31,10 +31,6 @@ const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) 
     }
     if (serverUrl) {
       params.push(`server_url=${encodeURIComponent(serverUrl)}`)
-    }
-    // Request transcoding if audio codec is EAC3 (not supported by browsers)
-    if (needsTranscode) {
-      params.push(`transcode=true`)
     }
     // Add JWT token for authentication (video element cannot send custom headers)
     const token = localStorage.getItem('auth_token')
@@ -66,7 +62,6 @@ const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) 
             language: s.Language || '',
             codec: s.Codec || '',
             isDefault: s.IsDefault || false,
-            needsTranscode: (s.Codec || '').toLowerCase() === 'eac3' || (s.Codec || '').toLowerCase() === 'ac3',
           }))
           const subs = streams.filter(s => s.Type === 'Subtitle').map(s => ({
             index: s.Index,
@@ -197,9 +192,7 @@ const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) 
     if (videoRef.current) {
       const wasPlaying = !videoRef.current.paused
       const savedTime = videoRef.current.currentTime
-      const track = audioTracks.find(t => t.index === audioIndex)
-      const needsTranscode = track?.needsTranscode || false
-      videoRef.current.src = buildStreamUrl(audioIndex, needsTranscode)
+      videoRef.current.src = buildStreamUrl(audioIndex)
       videoRef.current.currentTime = savedTime
       if (wasPlaying) videoRef.current.play().catch(() => {})
     }
@@ -235,9 +228,7 @@ const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) 
   }
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
-  const selectedTrack = audioTracks.find(t => t.index === selectedAudio)
-  const needsTranscode = selectedTrack?.needsTranscode || false
-  const streamUrl = buildStreamUrl(selectedAudio, needsTranscode)
+  const streamUrl = buildStreamUrl(selectedAudio)
 
   return (
     <div
