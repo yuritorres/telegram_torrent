@@ -328,8 +328,9 @@ class JellyfinClient:
 
     def get_stream_url(self, item_id: str, audio_stream_index: int = None) -> str:
         token = self.api_key or self.access_token or ''
-        # Direct stream - EAC3 audio codec is not supported by browsers
-        # For audio support, media files need AAC, MP3, or Opus audio codec
+        # Use direct stream - browsers will play video without audio for EAC3 codec
+        # For full audio support, media files should use AAC, MP3, or Opus audio codec
+        # Or enable Jellyfin server-side transcoding in Dashboard -> Playback settings
         url = f"{self.url}/Videos/{item_id}/stream?static=true&api_key={token}"
         if audio_stream_index is not None:
             url += f"&AudioStreamIndex={audio_stream_index}"
