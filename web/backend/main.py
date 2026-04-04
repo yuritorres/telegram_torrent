@@ -32,6 +32,7 @@ from auth import (
     authenticate_user,
     create_access_token,
     get_current_user,
+    get_current_user_optional,
     generate_password_hash,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
@@ -205,10 +206,14 @@ class JellyfinClient:
 
     def _authenticate(self, username: str, password: str):
         try:
+            auth_header = 'MediaBrowser Client="TelegramTorrent", Device="Server", DeviceId="unique-device-id", Version="1.0.0"'
             resp = self.session.post(
                 f"{self.url}/Users/authenticatebyname",
-                headers={'Content-Type': 'application/json'},
-                json={'Username': username, 'Pw': password},
+                headers={
+                    'Content-Type': 'application/json',
+                    'X-Emby-Authorization': auth_header
+                },
+                json={'Username': username, 'Password': password},
                 timeout=30,
             )
             resp.raise_for_status()
@@ -218,6 +223,10 @@ class JellyfinClient:
             logger.info("Jellyfin authentication OK")
         except Exception as e:
             logger.error(f"Jellyfin auth error: {e}")
+            try:
+                logger.error(f"Response content: {e.response.text if hasattr(e, 'response') else 'N/A'}")
+            except:
+                pass
 
     def is_available(self) -> bool:
         return self._available
@@ -879,7 +888,7 @@ async def get_jellyfin_image(item_id: str, type: str = "Primary", maxWidth: int 
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
-    image_url = jf.get_image_url(item_id, type, maxWidth, server_url)
+    image_url = jf.get_image_url(item_id, image_type=type, max_width=maxWidth, server_url=server_url)
     if not image_url:
         raise HTTPException(status_code=404, detail="Image not found - server not available")
     try:
@@ -929,11 +938,11 @@ async def get_jellyfin_subtitle(item_id: str, media_source_id: str, index: int, 
 
 
 @app.get("/api/jellyfin/stream/{item_id}")
-async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None, server_url: str = None, current_user: Dict = Depends(get_current_user)):
+async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int = None, server_url: str = None, token: str = None, current_user: Dict = Depends(get_current_user_optional)):
     if not app_state.jellyfin or not app_state.jellyfin.is_available():
         raise HTTPException(status_code=503, detail="Jellyfin not available")
     jf = app_state.jellyfin
-    stream_url = jf.get_stream_url(item_id, server_url, audioStreamIndex)
+    stream_url = jf.get_stream_url(item_id, server_url=server_url, audio_stream_index=audioStreamIndex)
     headers = {}
     if 'range' in request.headers:
         headers['Range'] = request.headers['range']

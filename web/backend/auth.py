@@ -98,3 +98,41 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 def generate_password_hash(password: str) -> str:
     """Utility function to generate password hash for configuration"""
     return get_password_hash(password)
+
+
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    token: Optional[str] = None
+) -> Dict:
+    """
+    Dependency to get current authenticated user from token.
+    Accepts token from either Authorization header or query parameter.
+    Used for streaming endpoints where HTML video element cannot send custom headers.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    # Try to get token from Authorization header first
+    auth_token = None
+    if credentials:
+        auth_token = credentials.credentials
+    # Fall back to query parameter
+    elif token:
+        auth_token = token
+    
+    if not auth_token:
+        raise credentials_exception
+    
+    payload = verify_token(auth_token)
+    
+    if payload is None:
+        raise credentials_exception
+    
+    username: str = payload.get("sub")
+    if username is None:
+        raise credentials_exception
+    
+    return {"username": username}

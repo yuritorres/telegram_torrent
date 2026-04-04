@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { X, Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Subtitles, Languages, Settings } from 'lucide-react'
-import axios from 'axios'
+import axios from '../../utils/axios'
 import { saveWatchProgress, getItemProgress, removeItemProgress } from '../../utils/watchProgress'
 
 const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) => {
@@ -31,6 +31,11 @@ const MediaPlayer = ({ itemId, title, serverUrl, onClose, onNext, onPrevious }) 
     }
     if (serverUrl) {
       params.push(`server_url=${encodeURIComponent(serverUrl)}`)
+    }
+    // Add JWT token for authentication (video element cannot send custom headers)
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      params.push(`token=${encodeURIComponent(token)}`)
     }
     if (params.length > 0) {
       url += `?${params.join('&')}`
