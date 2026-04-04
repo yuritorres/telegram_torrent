@@ -5,27 +5,28 @@ import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 export const Sidebar = ({
-    workspaces,
+    workspaces = [],
     activeWorkspaceObj,
     activeWorkspaceId,
     onSwitchWorkspace,
     onCreateWorkspace,
     onShowSettings,
-    currentPath,
+    currentPath = [],
     onNavigateDrive,
     isOpen,
     onGoHome,
     onGoRecent,
     onGoFavorites,
     onOpenLocal,
-    tags,
+    tags = [],
     activeTagId,
     onNavigateTag,
     onGoTrash
 }) => {
     const { t } = useTranslation();
     const activeConnections = activeWorkspaceObj?.connections || [];
-    const currentFolderId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+    const safePath = Array.isArray(currentPath) ? currentPath : [];
+    const currentFolderId = safePath.length > 0 ? safePath[safePath.length - 1].id : null;
 
     return (
         <aside className={`${isOpen ? 'w-[260px] border-r' : 'w-0 border-none'} flex flex-col border-slate-800 bg-slate-900/50 backdrop-blur-sm relative transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden`}>
@@ -84,7 +85,7 @@ export const Sidebar = ({
                         <div className="space-y-2">
                             {activeConnections.length === 0 && <div className="text-xs text-slate-500 px-2 italic">{t('sidebar.noConnections')}</div>}
                             {activeConnections.map(conn => {
-                                const isActive = currentPath.length > 0 && currentPath[0].id === conn.id;
+                                const isActive = safePath.length > 0 && safePath[0].id === conn.id;
                                 const serviceInfo = SERVICE_CATALOG.find(s => s.id === conn.serviceId) || SERVICE_CATALOG[0];
                                 return (
                                     <div key={conn.id} onClick={() => onNavigateDrive(conn)} className={`group p-2 rounded-lg cursor-pointer border transition-all ${isActive ? 'bg-slate-800 border-slate-700' : 'border-transparent hover:bg-slate-800/50 hover:border-slate-700/50'}`}>

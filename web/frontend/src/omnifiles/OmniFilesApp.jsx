@@ -40,6 +40,9 @@ const AppLayout = () => {
         loadSystem
     } = useFileSystem();
 
+    // Debug logging
+    console.log('[OmniFilesApp] files:', files, 'type:', typeof files, 'isArray:', Array.isArray(files));
+
     const { selectedFileIds, setSelectedFileIds, toggleSelection, clearSelection, selectRange, lastSelectedId } = useSelection();
     const { isDragging, handleDragOver, handleDragLeave, handleDrop } = useDragDrop(importDroppedFiles);
     const { clipboard, copy, cut, paste } = useClipboard();
@@ -151,12 +154,14 @@ const AppLayout = () => {
     };
 
     const displayedFiles = useMemo(() => {
+        // Safety check
+        const safeFiles = Array.isArray(files) ? files : [];
         let filtered = [];
 
         if (searchQuery.trim() !== '') {
-            filtered = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+            filtered = safeFiles.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
         } else if (['favorites', 'recent', 'trash'].includes(currentFolderId) || (currentFolderId && currentFolderId.startsWith('tag-'))) {
-            filtered = files;
+            filtered = safeFiles;
         } else if (currentFolderId === null && activeWorkspaceObj && activeWorkspaceObj.connections && activeWorkspaceObj.connections.length > 0) {
             filtered = activeWorkspaceObj.connections.map(conn => ({
                 id: conn.id,
@@ -171,7 +176,7 @@ const AppLayout = () => {
                 parentId: null
             }));
         } else {
-            filtered = files;
+            filtered = safeFiles;
         }
 
         return filtered.sort((a, b) => {
@@ -252,7 +257,7 @@ const AppLayout = () => {
         );
     }
 
-    const selectedFiles = files.filter(f => selectedFileIds.includes(f.id));
+    const selectedFiles = Array.isArray(files) ? files.filter(f => selectedFileIds.includes(f.id)) : [];
 
     return (
         <div className="h-full flex flex-col bg-background text-foreground">
@@ -282,13 +287,22 @@ const AppLayout = () => {
                 {isSidebarOpen && (
                     <Sidebar
                         workspaces={workspaces}
-                        activeWorkspace={activeWorkspace}
+                        activeWorkspaceObj={activeWorkspaceObj}
+                        activeWorkspaceId={activeWorkspace}
                         onSwitchWorkspace={switchWorkspace}
-                        currentFolderId={currentFolderId}
-                        onNavigate={navigate}
+                        onCreateWorkspace={createWorkspace}
+                        onShowSettings={setShowSettings}
+                        currentPath={currentPath}
+                        onNavigateDrive={navigate}
+                        isOpen={isSidebarOpen}
+                        onGoHome={() => navigate(null)}
+                        onGoRecent={() => navigate('recent')}
+                        onGoFavorites={() => navigate('favorites')}
+                        onOpenLocal={openLocalFolder}
                         tags={tags}
-                        onOpenSettings={() => setShowSettings(true)}
-                        onOpenTagManager={() => setShowTagManager(true)}
+                        activeTagId={activeTagId}
+                        onNavigateTag={(tagId) => navigate(`tag-${tagId}`)}
+                        onGoTrash={() => navigate('trash')}
                     />
                 )}
 
