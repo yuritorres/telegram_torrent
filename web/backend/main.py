@@ -504,66 +504,22 @@ class JellyfinHelper:
         return ''
 
 # ---------------------------------------------------------------------------
-# Lightweight Docker helpers
+# Docker Management (using advanced DockerManager)
 # ---------------------------------------------------------------------------
 
-class DockerHelper:
-    def __init__(self):
-        self.client = None
-        self._available = False
-        try:
-            import docker
-            self.client = docker.from_env()
-            self._available = True
-            logger.info("Docker client initialized")
-        except Exception as e:
-            logger.warning(f"Docker not available: {e}")
+from docker_manager import DockerManager
 
-    def is_available(self) -> bool:
-        return self._available and self.client is not None
-
-    def list_containers(self) -> List[Dict]:
-        if not self.is_available():
-            return []
-        try:
-            containers = self.client.containers.list(all=True)
-            result = []
-            for c in containers:
-                labels = c.labels or {}
-                stack = labels.get('com.docker.compose.project', None)
-                
-                result.append({
-                    'id': c.short_id,
-                    'name': c.name,
-                    'status': c.status,
-                    'image': c.image.tags[0] if c.image.tags else 'unknown',
-                    'created': c.attrs['Created'],
-                    'stack': stack,
-                })
-            return result
-        except Exception as e:
-            logger.error(f"Docker list error: {e}")
-            return []
-
-    def start_container(self, name: str):
-        if not self.is_available():
-            return False, "Docker not available"
-        try:
-            c = self.client.containers.get(name)
-            c.start()
-            return True, f"Container '{c.name}' started"
-        except Exception as e:
-            return False, str(e)
-
-    def stop_container(self, name: str):
-        if not self.is_available():
-            return False, "Docker not available"
-        try:
-            c = self.client.containers.get(name)
-            c.stop(timeout=10)
-            return True, f"Container '{c.name}' stopped"
-        except Exception as e:
-            return False, str(e)
+def init_docker_manager() -> Optional[DockerManager]:
+    """Initialize Docker manager with error handling"""
+    try:
+        import docker
+        client = docker.from_env()
+        manager = DockerManager(client)
+        logger.info("Docker manager initialized")
+        return manager
+    except Exception as e:
+        logger.warning(f"Docker not available: {e}")
+        return None
 
 # ---------------------------------------------------------------------------
 # WebSocket connection manager
@@ -600,7 +556,7 @@ class AppState:
     def __init__(self):
         self.qb_sessions: List[Dict] = []
         self.jellyfin: Optional[JellyfinHelper] = None
-        self.docker: Optional[DockerHelper] = None
+        self.docker: Optional[DockerManager] = None
         self.telegram_storage: Optional[TelegramStorageService] = None
         self.user_manager: Optional[UserManager] = None
 
@@ -637,11 +593,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Jellyfin init error: {e}")
 
-    # Initialize Docker
+    # Initialize Docker Manager
     try:
-        app_state.docker = DockerHelper()
-        if app_state.docker.is_available():
-            logger.info("Docker client initialized")
+        app_state.docker = init_docker_manager()
+        if app_state.docker and app_state.docker.is_available():
+            system_info = app_state.docker.get_system_info()
+            if system_info:
+                logger.info(f"Docker manager initialized: {system_info['containers']} containers, "
+                          f"Docker {system_info['docker_version']}")
     except Exception as e:
         logger.error(f"Docker init error: {e}")
 
@@ -697,6 +656,11 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Include advanced Docker routes
+import docker_routes
+docker_routes.set_app_state(app_state)
+app.include_router(docker_routes.router)
 
 # Add middlewares in correct order (last added = first executed)
 app.add_middleware(
@@ -1054,10 +1018,63 @@ async def stream_jellyfin(item_id: str, request: Request, audioStreamIndex: int 
 
 
 @app.get("/api/docker/containers")
-async def get_docker_containers(current_user: Dict = Depends(get_current_user)):
-    if app_state.docker and app_state.docker.is_available():
-        return {"containers": app_state.docker.list_containers()}
-    raise HTTPException(status_code=503, detail="Docker not available")
+async def get_docker_containers(
+    all: bool = True,
+    status: Optional[str] = None,
+    current_user: Dict = Depends(get_current_user)
+):
+    """List Docker containers with enhanced information"""
+    if not app_state.docker or not app_state.docker.is_available():
+        raise HTTPException(status_code=503, detail="Docker not available")
+    
+    filters = {}
+    if status:
+        filters['status'] = status
+    
+    containers = app_state.docker.list_containers(all=all, filters=filters if filters else None)
+    return {
+        "containers": containers,
+        "total": len(containers),
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/api/docker/containers/{container_name}/logs")
+async def get_docker_container_logs(container_name: str, current_user: Dict = Depends(get_current_user)):
+    if not app_state.docker or not app_state.docker.is_available():
+        raise HTTPException(status_code=503, detail="Docker not available")
+    
+    logs = app_state.docker.get_container_logs(container_name)
+    return {
+        "logs": logs,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/api/docker/images")
+async def get_docker_images(current_user: Dict = Depends(get_current_user)):
+    if not app_state.docker or not app_state.docker.is_available():
+        raise HTTPException(status_code=503, detail="Docker not available")
+    
+    images = app_state.docker.list_images()
+    return {
+        "images": images,
+        "total": len(images),
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/api/docker/volumes")
+async def get_docker_volumes(current_user: Dict = Depends(get_current_user)):
+    if not app_state.docker or not app_state.docker.is_available():
+        raise HTTPException(status_code=503, detail="Docker not available")
+    
+    volumes = app_state.docker.list_volumes()
+    return {
+        "volumes": volumes,
+        "total": len(volumes),
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @app.post("/api/docker/containers/{container_name}/start")
