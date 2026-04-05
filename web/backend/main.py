@@ -38,6 +38,14 @@ from auth import (
 )
 from telegram_storage import TelegramStorageService
 from user_manager import UserManager
+from middleware import (
+    RequestIDMiddleware,
+    ErrorHandlerMiddleware,
+    RateLimitMiddleware,
+    LoggingMiddleware,
+)
+from health import health_monitor, HealthResponse
+from shutdown import shutdown_manager
 
 # ---------------------------------------------------------------------------
 # Configuration (read directly from environment variables)
@@ -605,7 +613,12 @@ app_state = AppState()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Web API Backend...")
+    logger.info(f"Application version: {health_monitor.version}")
+    
+    # Setup signal handlers for graceful shutdown
+    shutdown_manager.setup_signal_handlers()
 
+    # Initialize qBittorrent sessions
     for inst in QB_INSTANCES:
         session = qb_login(inst['url'], inst['username'], inst['password'])
         app_state.qb_sessions.append({
@@ -613,36 +626,66 @@ async def lifespan(app: FastAPI):
             'url': inst['url'],
             'session': session,
         })
+        if session:
+            logger.info(f"qBittorrent connected: {inst['name']} ({inst['url']})")
 
+    # Initialize Jellyfin
     try:
         app_state.jellyfin = JellyfinHelper()
         if app_state.jellyfin.is_available():
-            logger.info("Jellyfin initialized")
+            logger.info(f"Jellyfin initialized with {len(app_state.jellyfin.clients)} account(s)")
     except Exception as e:
         logger.error(f"Jellyfin init error: {e}")
 
+    # Initialize Docker
     try:
         app_state.docker = DockerHelper()
         if app_state.docker.is_available():
-            logger.info("Docker initialized")
+            logger.info("Docker client initialized")
     except Exception as e:
         logger.error(f"Docker init error: {e}")
 
+    # Initialize Telegram Storage
     try:
         app_state.telegram_storage = TelegramStorageService()
         logger.info("Telegram Storage initialized")
     except Exception as e:
         logger.error(f"Telegram Storage init error: {e}")
 
+    # Initialize User Manager
     try:
         app_state.user_manager = UserManager()
         logger.info("User Manager initialized")
     except Exception as e:
         logger.error(f"Failed to initialize User Manager: {e}")
 
-    asyncio.create_task(broadcast_updates())
+    # Start background tasks
+    broadcast_task = asyncio.create_task(broadcast_updates())
+    
+    # Register cleanup handlers
+    async def cleanup():
+        logger.info("Cleaning up resources...")
+        broadcast_task.cancel()
+        try:
+            await broadcast_task
+        except asyncio.CancelledError:
+            pass
+        # Close qBittorrent sessions
+        for inst in app_state.qb_sessions:
+            if inst['session']:
+                inst['session'].close()
+        logger.info("Cleanup completed")
+    
+    shutdown_manager.register_handler(cleanup)
+    
+    logger.info("Web API Backend started successfully")
+    logger.info(f"Uptime tracking started at {datetime.now().isoformat()}")
+    
     yield
+    
+    # Graceful shutdown
     logger.info("Shutting down Web API Backend...")
+    await shutdown_manager.shutdown()
 
 # ---------------------------------------------------------------------------
 # FastAPI app
@@ -655,6 +698,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Add middlewares in correct order (last added = first executed)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -662,6 +706,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add custom middlewares
+app.add_middleware(ErrorHandlerMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(LoggingMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -723,6 +773,27 @@ class PasswordHashRequest(BaseModel):
 @app.get("/")
 async def root():
     return {"name": "Telegram Torrent Manager API", "version": "1.0.0", "status": "running"}
+
+
+@app.get("/api/health", response_model=HealthResponse)
+@app.head("/api/health")
+async def health_check(include_system: bool = False):
+    """
+    Comprehensive health check endpoint
+    Returns application health status, uptime, and service availability
+    """
+    qb_connected = any(i['session'] is not None for i in app_state.qb_sessions)
+    jellyfin_connected = app_state.jellyfin is not None and app_state.jellyfin.is_available()
+    docker_available = app_state.docker is not None and app_state.docker.is_available()
+    telegram_storage_available = app_state.telegram_storage is not None
+    
+    return health_monitor.get_health_status(
+        qb_connected=qb_connected,
+        jellyfin_connected=jellyfin_connected,
+        docker_available=docker_available,
+        telegram_storage_available=telegram_storage_available,
+        include_system=include_system
+    )
 
 
 @app.post("/api/auth/login", response_model=TokenResponse)
