@@ -143,7 +143,7 @@ class GoStreamClient:
     def get_torrent(self, info_hash: str) -> Optional[Dict]:
         """Get torrent details"""
         try:
-            resp = req_lib.get(f"{self.base_url}/api/torrents/{info_hash}", timeout=10)
+            resp = requests.get(f"{self.base_url}/api/torrents/{info_hash}", timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
                 return data.get('torrent')
@@ -157,7 +157,7 @@ class GoStreamClient:
             data = {"magnet": magnet_link}
             if save_path:
                 data["save_path"] = save_path
-            resp = req_lib.post(f"{self.base_url}/api/torrents/add", json=data, timeout=30)
+            resp = requests.post(f"{self.base_url}/api/torrents/add", json=data, timeout=30)
             if resp.status_code == 200:
                 result = resp.json()
                 if result.get('success'):
@@ -170,7 +170,7 @@ class GoStreamClient:
         """Remove torrent"""
         try:
             data = {"delete_files": delete_files}
-            resp = req_lib.post(f"{self.base_url}/api/torrents/{info_hash}/remove", json=data, timeout=10)
+            resp = requests.post(f"{self.base_url}/api/torrents/{info_hash}/remove", json=data, timeout=10)
             if resp.status_code == 200:
                 return resp.json().get('success', False)
         except Exception as e:
@@ -180,7 +180,7 @@ class GoStreamClient:
     def get_cache_stats(self) -> Dict:
         """Get cache statistics"""
         try:
-            resp = req_lib.get(f"{self.base_url}/api/cache/stats", timeout=5)
+            resp = requests.get(f"{self.base_url}/api/cache/stats", timeout=5)
             if resp.status_code == 200:
                 return resp.json().get('stats', {})
         except Exception as e:
@@ -191,7 +191,7 @@ class GoStreamClient:
         """Enable/disable priority mode for torrent"""
         try:
             data = {"enabled": enabled}
-            resp = req_lib.post(f"{self.base_url}/api/torrents/{info_hash}/priority", json=data, timeout=5)
+            resp = requests.post(f"{self.base_url}/api/torrents/{info_hash}/priority", json=data, timeout=5)
             if resp.status_code == 200:
                 return resp.json().get('success', False)
         except Exception as e:
