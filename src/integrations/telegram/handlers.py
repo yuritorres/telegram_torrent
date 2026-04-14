@@ -115,7 +115,7 @@ async def process_youtube_download(url: str, chat_id: str) -> None:
         send_telegram(f"❌ Erro inesperado: {str(e)}", chat_id, use_keyboard=True)
 
 
-def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, jellyfin_manager=None, sync_manager=None, stats_manager=None, docker_manager=None, multi_instance_manager=None) -> int:
+def process_messages(sess, last_update_id: int, add_magnet_func, qb_url: str, jellyfin_manager=None, sync_manager=None, stats_manager=None, docker_manager=None, multi_instance_manager=None, gostream_manager=None) -> int:
     if not TELEGRAM_BOT_TOKEN:
         logger.error("Token do bot do Telegram não configurado")
         return last_update_id

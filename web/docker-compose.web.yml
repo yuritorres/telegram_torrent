@@ -15,6 +15,7 @@ services:
       - ../.env
     networks:
       - resolutahubos-network
+      - telegram_torrent_telegram-torrent-network
 
   web-frontend:
     build:
@@ -35,3 +36,5 @@ services:
 networks:
   resolutahubos-network:
     driver: bridge
+  telegram_torrent_telegram-torrent-network:
+    external: true
