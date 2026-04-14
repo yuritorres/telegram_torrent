@@ -345,7 +345,7 @@ const GoStreamApp = () => {
             </div>
             <p className="text-xl font-semibold text-green-400">Online</p>
             <p className="text-xs text-gray-500">
-              API: {GOSTREAM_API_PORT || 8090}
+              API: 8090
             </p>
           </div>
         </div>
