@@ -199,29 +199,35 @@ class GoStreamClient:
         return False
     
     def get_streaming_files(self, info_hash: str) -> List[Dict]:
-        """Get list of streamable files for a torrent"""
-        torrent = self.get_torrent(info_hash)
-        if not torrent:
+        """Retorna lista de arquivos streamáveis de um torrent"""
+        try:
+            # Usa o endpoint específico de arquivos
+            resp = req_lib.get(f"{self.base_url}/api/torrents/{info_hash}/files", timeout=10)
+            if resp.status_code != 200:
+                logger.warning(f"Failed to get files from GoStream API: {resp.status_code}")
+                return []
+            
+            data = resp.json()
+            if not data.get('success'):
+                return []
+            
+            files = data.get('files', [])
+            # Filtra apenas arquivos de vídeo
+            video_exts = {'.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv'}
+            streamable = []
+            for f in files:
+                path = f.get('path', '')
+                if any(path.lower().endswith(ext) for ext in video_exts):
+                    streamable.append({
+                        'name': os.path.basename(path),
+                        'path': path,
+                        'size': f.get('size', 0),
+                        'offset': f.get('offset', 0)
+                    })
+            return streamable
+        except Exception as e:
+            logger.error(f"Error getting streaming files: {e}")
             return []
-        
-        files = torrent.get('files', [])
-        streamable = []
-        
-        for i, f in enumerate(files):
-            path = f.get('path', '')
-            size = f.get('size', 0)
-            # Check if video file
-            if any(path.lower().endswith(ext) for ext in ['.mkv', '.mp4', '.avi', '.mov', '.webm', '.m4v']):
-                safe_name = self._sanitize_filename(torrent.get('name', info_hash[:8]))
-                file_name = self._sanitize_filename(path.split('/')[-1])
-                
-                # If not already has extension, add .mkv
-                if not any(file_name.endswith(ext) for ext in ['.mkv', '.mp4', '.avi', '.mov']):
-                    file_name += '.mkv'
-                
-                streamable.append({
-                    'index': i,
-                    'path': path,
                     'name': file_name,
                     'size': size,
                     'size_formatted': self._format_size(size),

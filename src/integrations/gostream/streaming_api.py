@@ -94,6 +94,25 @@ class StreamingAPI:
                 }
             })
         
+        @self.app.route('/api/torrents/<info_hash>/files', methods=['GET'])
+        def get_torrent_files(info_hash: str):
+            """Retorna lista de arquivos de um torrent"""
+            info = self.bt_engine.get_torrent_info(info_hash)
+            
+            if not info:
+                return jsonify({'success': False, 'error': 'Torrent not found'}), 404
+            
+            # Retorna lista de arquivos
+            files = info.files if info.files else []
+            
+            return jsonify({
+                'success': True,
+                'info_hash': info_hash,
+                'files': files,
+                'total_size': info.total_size,
+                'has_metadata': len(files) > 0
+            })
+        
         @self.app.route('/api/torrents/add', methods=['POST'])
         def add_torrent():
             """Adiciona um torrent via magnet link"""
