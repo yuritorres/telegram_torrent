@@ -98,21 +98,28 @@ class GoStreamManager:
                     lambda ih, pi: self.bt_engine.read_piece(ih, pi)
                 )
             
-            # 6. Inicializa FUSE (opcional)
+            # 6. Inicializa FUSE (opcional - não impede funcionamento)
+            self.fuse_manager = None
             if os.name != 'nt':  # FUSE não disponível no Windows nativo
                 try:
-                    self.fuse_manager = FUSEManager(
-                        bt_engine=self.bt_engine,
-                        native_bridge=self.native_bridge,
-                        cache=self.cache,
-                        config=self.config
-                    )
+                    # Verifica se libfuse está disponível
+                    import subprocess
+                    result = subprocess.run(['ldconfig', '-p'], capture_output=True, text=True)
+                    if 'libfuse' in result.stdout or os.path.exists('/dev/fuse'):
+                        self.fuse_manager = FUSEManager(
+                            bt_engine=self.bt_engine,
+                            native_bridge=self.native_bridge,
+                            cache=self.cache,
+                            config=self.config
+                        )
+                        logger.info("FUSE disponível e inicializado")
+                    else:
+                        logger.info("libfuse não encontrado, continuando sem FUSE")
                 except Exception as e:
-                    logger.warning(f"FUSE não disponível: {e}")
+                    logger.info(f"FUSE não disponível: {e}. Continuando em modo API-only.")
                     self.fuse_manager = None
             else:
                 logger.info("FUSE desabilitado no Windows")
-                self.fuse_manager = None
             
             # 7. Inicializa API
             self.api = StreamingAPI(

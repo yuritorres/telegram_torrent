@@ -1,6 +1,16 @@
 # Use uma imagem base oficial do Python
 FROM python:3.9-slim
 
+# Instale dependências do sistema necessárias para GoStream
+RUN apt-get update && apt-get install -y \
+    libfuse2 \
+    fuse \
+    gcc \
+    g++ \
+    libboost-all-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Defina o diretório de trabalho dentro do contêiner
 WORKDIR /app
 
