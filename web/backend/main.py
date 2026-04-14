@@ -202,7 +202,7 @@ class GoStreamClient:
         """Retorna lista de arquivos streamáveis de um torrent"""
         try:
             # Usa o endpoint específico de arquivos
-            resp = req_lib.get(f"{self.base_url}/api/torrents/{info_hash}/files", timeout=10)
+            resp = requests.get(f"{self.base_url}/api/torrents/{info_hash}/files", timeout=10)
             if resp.status_code != 200:
                 logger.warning(f"Failed to get files from GoStream API: {resp.status_code}")
                 return []
@@ -228,15 +228,7 @@ class GoStreamClient:
         except Exception as e:
             logger.error(f"Error getting streaming files: {e}")
             return []
-                    'name': file_name,
-                    'size': size,
-                    'size_formatted': self._format_size(size),
-                    'stream_url': f"/api/gostream/stream/{info_hash}/{i}",
-                    'direct_path': f"{self.mount_path}/{safe_name}/{file_name}",
-                })
-        
-        return streamable
-    
+
     def _sanitize_filename(self, name: str) -> str:
         """Sanitize filename for filesystem"""
         invalid = '<>:"/\\|?*'
