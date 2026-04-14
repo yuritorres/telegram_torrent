@@ -18,9 +18,10 @@ import {
   Download
 } from 'lucide-react'
 import { useNotification } from '../../context/NotificationContext'
+import axios from '../utils/axios'
 
-// API base URL - uses relative path for production, can be overridden for dev
-const API_BASE = import.meta.env.VITE_API_URL || ''
+// API base path for GoStream endpoints
+const API_BASE = '/api'
 
 const GoStreamApp = () => {
   const { showNotification } = useNotification()
@@ -41,8 +42,8 @@ const GoStreamApp = () => {
   // Check GoStream status
   const checkStatus = useCallback(async () => {
     try {
-      const resp = await fetch(`${API_BASE}/gostream/status`)
-      const data = await resp.json()
+      const resp = await axios.get(`${API_BASE}/gostream/status`)
+      const data = resp.data
       setIsAvailable(data.available && data.enabled)
     } catch (e) {
       setIsAvailable(false)
@@ -55,13 +56,13 @@ const GoStreamApp = () => {
     
     setIsLoading(true)
     try {
-      const resp = await fetch(`${API_BASE}/gostream/torrents`)
-      const data = await resp.json()
+      const resp = await axios.get(`${API_BASE}/gostream/torrents`)
+      const data = resp.data
       if (data.success) {
         setTorrents(data.torrents || [])
       }
     } catch (e) {
-      console.error('Error loading torrents:', e)
+      showNotification('Erro ao carregar torrents', 'error')
     } finally {
       setIsLoading(false)
     }
@@ -72,13 +73,13 @@ const GoStreamApp = () => {
     if (!isAvailable) return
     
     try {
-      const resp = await fetch(`${API_BASE}/gostream/cache/stats`)
-      const data = await resp.json()
+      const resp = await axios.get(`${API_BASE}/gostream/cache/stats`)
+      const data = resp.data
       if (data.success) {
         setCacheStats(data.stats)
       }
     } catch (e) {
-      console.error('Error loading cache stats:', e)
+      // Silently fail
     }
   }, [isAvailable])
 
@@ -111,10 +112,8 @@ const GoStreamApp = () => {
 
     setIsLoading(true)
     try {
-      const resp = await fetch(`${API_BASE}/gostream/torrents/add?magnet_link=${encodeURIComponent(magnetLink)}`, {
-        method: 'POST'
-      })
-      const data = await resp.json()
+      const resp = await axios.post(`${API_BASE}/gostream/torrents/add?magnet_link=${encodeURIComponent(magnetLink)}`)
+      const data = resp.data
       
       if (data.success) {
         showNotification('Torrent adicionado com sucesso!', 'success')
@@ -136,10 +135,8 @@ const GoStreamApp = () => {
     if (!confirm('Tem certeza que deseja remover este torrent?')) return
 
     try {
-      const resp = await fetch(`${API_BASE}/gostream/torrents/${infoHash}?delete_files=false`, {
-        method: 'DELETE'
-      })
-      const data = await resp.json()
+      const resp = await axios.delete(`${API_BASE}/gostream/torrents/${infoHash}?delete_files=false`)
+      const data = resp.data
       
       if (data.success) {
         showNotification('Torrent removido', 'success')
@@ -157,10 +154,8 @@ const GoStreamApp = () => {
   // Set priority mode
   const handleSetPriority = async (infoHash, enabled) => {
     try {
-      const resp = await fetch(`${API_BASE}/gostream/torrents/${infoHash}/priority?enabled=${enabled}`, {
-        method: 'POST'
-      })
-      const data = await resp.json()
+      const resp = await axios.post(`${API_BASE}/gostream/torrents/${infoHash}/priority?enabled=${enabled}`)
+      const data = resp.data
       
       if (data.success) {
         showNotification(`Priority mode ${enabled ? 'ativado' : 'desativado'}`, 'success')
@@ -174,8 +169,8 @@ const GoStreamApp = () => {
   // Load streamable files
   const loadStreamableFiles = async (infoHash) => {
     try {
-      const resp = await fetch(`${API_BASE}/gostream/torrents/${infoHash}`)
-      const data = await resp.json()
+      const resp = await axios.get(`${API_BASE}/gostream/torrents/${infoHash}`)
+      const data = resp.data
       
       if (data.success) {
         setStreamableFiles(data.streamable_files || [])
