@@ -18,7 +18,7 @@ import {
   Download
 } from 'lucide-react'
 import { useNotification } from '../../context/NotificationContext'
-import axios from '../utils/axios'
+import axios from '../../utils/axios'
 
 // API base path for GoStream endpoints
 const API_BASE = '/api'
