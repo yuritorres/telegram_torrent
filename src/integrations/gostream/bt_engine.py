@@ -40,6 +40,16 @@ class TorrentState(Enum):
     CHECKING_RESUME_DATA = "checking_resume_data"
 
 
+def _convert_lt_state(state) -> str:
+    """Converte estado do libtorrent para string"""
+    if hasattr(state, 'name'):
+        return str(state.name).lower()
+    elif isinstance(state, str):
+        return state.lower()
+    else:
+        return str(state).lower().replace('libtorrent.states.', '').replace('states.', '')
+
+
 @dataclass
 class PieceInfo:
     """Informações sobre uma peça do torrent"""
@@ -540,7 +550,7 @@ class BTEngine:
         status = handle.status()
         
         info = self.torrent_info[info_hash]
-        info.state = TorrentState(status.state)
+        info.state = TorrentState(_convert_lt_state(status.state))
         info.progress = status.progress
         info.download_rate = status.download_rate
         info.upload_rate = status.upload_rate
