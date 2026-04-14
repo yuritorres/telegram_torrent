@@ -128,6 +128,34 @@ def main():
         logger.error(f"Erro ao inicializar o gerenciador Docker: {e}")
         docker_manager = None
     
+    # Inicializa o GoStream (BitTorrent Streaming Engine)
+    gostream_manager = None
+    try:
+        from src.integrations.gostream.bot_integration import get_gostream
+        from src.core.config import GOSTREAM_ENABLED
+        
+        if GOSTREAM_ENABLED:
+            logger.info("Inicializando GoStream - BitTorrent Streaming Engine...")
+            gostream_manager = get_gostream()
+            
+            if gostream_manager.initialize():
+                if gostream_manager.start():
+                    logger.info("✅ GoStream inicializado e operacional!")
+                    logger.info(f"   API REST: http://{gostream_manager.manager.config.api_host}:{gostream_manager.manager.config.api_port}")
+                    if gostream_manager.manager.fuse_manager:
+                        logger.info(f"   FUSE Mount: {gostream_manager.manager.config.fuse_mount_path}")
+                    send_telegram("✅ GoStream - BitTorrent Streaming Engine ativado!")
+                else:
+                    logger.warning("GoStream inicializado mas serviços não iniciaram")
+            else:
+                logger.warning("Falha ao inicializar GoStream")
+                gostream_manager = None
+        else:
+            logger.info("GoStream desabilitado (GOSTREAM_ENABLED=false)")
+    except Exception as e:
+        logger.error(f"Erro ao inicializar GoStream: {e}")
+        gostream_manager = None
+    
     # Inicializa o cliente WhatsApp WAHA
     waha_enabled = os.getenv('WAHA_URL') and os.getenv('WAHA_API_KEY')
     flask_app = None
@@ -175,7 +203,7 @@ def main():
         nonlocal last_update_id, sess
         while True:
             try:
-                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager, sync_manager, stats_manager, docker_manager, multi_instance_manager)
+                last_update_id = process_messages(sess, last_update_id, add_magnet, QB_URL, jellyfin_manager, sync_manager, stats_manager, docker_manager, multi_instance_manager, gostream_manager)
                 time.sleep(1)
             except Exception as e:
                 print(f"Erro no processamento de mensagens: {e}")
@@ -272,6 +300,14 @@ def main():
     except Exception as e:
         logger.error(f"Erro inesperado: {e}")
     finally:
+        # Para GoStream se estiver rodando
+        if gostream_manager:
+            try:
+                gostream_manager.stop()
+                logger.info("GoStream encerrado")
+            except Exception as e:
+                logger.error(f"Erro ao encerrar GoStream: {e}")
+        
         logger.info("Bot encerrado.")
 
 if __name__ == "__main__":

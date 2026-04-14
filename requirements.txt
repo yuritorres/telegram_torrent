@@ -7,3 +7,7 @@ aiofiles
 beautifulsoup4
 flask
 docker
+
+# GoStream - BitTorrent Streaming Engine
+libtorrent
+fusepy>=3.0.1

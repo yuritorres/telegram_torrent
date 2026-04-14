@@ -6,6 +6,7 @@ Interface web moderna com aparência de sistema operacional para gerenciar sua a
 
 - **Interface estilo OS**: Design inspirado em sistemas operacionais modernos
 - **Gerenciamento de Torrents**: Adicionar, pausar, retomar e remover torrents
+- **GoStream Streaming**: Streamar torrents sem baixar via BitTorrent
 - **Biblioteca Jellyfin**: Visualizar itens recentes do servidor de mídia
 - **Controle Docker**: Gerenciar containers Docker
 - **Monitor do Sistema**: Acompanhar status de todos os serviços
@@ -50,6 +51,29 @@ Arquivo docker-compose será adicionado para facilitar o deploy completo.
 
 O backend utiliza as mesmas variáveis de ambiente do arquivo `.env` principal da aplicação.
 
+### GoStream (Streaming de Torrents)
+
+Para habilitar o GoStream na interface web, configure no `.env`:
+
+```env
+# Habilitar GoStream
+GOSTREAM_ENABLED=true
+
+# Configuração da API GoStream
+GOSTREAM_API_HOST=localhost
+GOSTREAM_API_PORT=8090
+GOSTREAM_MOUNT_PATH=/mnt/gostream
+```
+
+O GoStream permite streamar conteúdo de torrents **sem precisar baixar o arquivo completo**. Os vídeos são reproduzidos diretamente via BitTorrent streaming.
+
+**Como usar:**
+1. Clique no ícone "GoStream" na área de trabalho
+2. Adicione um magnet link
+3. Aguarde carregar a metadata (5-30 segundos)
+4. Clique no torrent para ver os arquivos disponíveis
+5. Clique em "Reproduzir" no arquivo de vídeo desejado
+
 ## 📚 Tecnologias
 
 **Backend:**
@@ -73,6 +97,14 @@ O backend utiliza as mesmas variáveis de ambiente do arquivo `.env` principal d
 - ✅ Remover torrents
 - ✅ Visualizar progresso em tempo real
 - ✅ Suporte multi-instância
+
+### GoStream - Streaming de Torrents
+- ✅ Adicionar torrents via magnet link
+- ✅ Visualizar arquivos de vídeo disponíveis
+- ✅ Reproduzir vídeos diretamente (streaming)
+- ✅ Ativar Priority Mode para streaming otimizado
+- ✅ Estatísticas de cache em tempo real
+- ✅ Suporte a múltiplos formatos (MKV, MP4, AVI, MOV)
 
 ### Biblioteca Jellyfin
 - ✅ Visualizar itens recentes

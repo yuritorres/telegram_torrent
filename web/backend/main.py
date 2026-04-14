@@ -100,6 +100,162 @@ def parse_qb_instances() -> List[Dict]:
 QB_INSTANCES = parse_qb_instances()
 QB_MULTI_INSTANCE = len(QB_INSTANCES) > 1
 
+# GoStream Configuration
+GOSTREAM_ENABLED = os.getenv('GOSTREAM_ENABLED', 'false').lower() == 'true'
+GOSTREAM_API_HOST = os.getenv('GOSTREAM_API_HOST', 'localhost')
+GOSTREAM_API_PORT = int(os.getenv('GOSTREAM_API_PORT', '8090'))
+GOSTREAM_MOUNT_PATH = os.getenv('GOSTREAM_MOUNT_PATH', '/mnt/gostream')
+GOSTREAM_WEBHOOK_PORT = int(os.getenv('GOSTREAM_WEBHOOK_PORT', '5001'))
+
+# ---------------------------------------------------------------------------
+# GoStream Client
+# ---------------------------------------------------------------------------
+
+class GoStreamClient:
+    """Client for GoStream BitTorrent Streaming Engine"""
+    
+    def __init__(self, host: str = 'localhost', port: int = 8090, mount_path: str = '/mnt/gostream'):
+        self.base_url = f"http://{host}:{port}"
+        self.mount_path = mount_path
+        self.enabled = GOSTREAM_ENABLED
+    
+    def is_available(self) -> bool:
+        """Check if GoStream API is available"""
+        if not self.enabled:
+            return False
+        try:
+            resp = req_lib.get(f"{self.base_url}/api/health", timeout=2)
+            return resp.status_code == 200 and resp.json().get('success', False)
+        except Exception:
+            return False
+    
+    def list_torrents(self) -> List[Dict]:
+        """List all torrents from GoStream"""
+        try:
+            resp = req_lib.get(f"{self.base_url}/api/torrents", timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get('torrents', [])
+        except Exception as e:
+            logger.error(f"GoStream list_torrents error: {e}")
+        return []
+    
+    def get_torrent(self, info_hash: str) -> Optional[Dict]:
+        """Get torrent details"""
+        try:
+            resp = req_lib.get(f"{self.base_url}/api/torrents/{info_hash}", timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get('torrent')
+        except Exception as e:
+            logger.error(f"GoStream get_torrent error: {e}")
+        return None
+    
+    def add_torrent(self, magnet_link: str, save_path: str = None) -> Optional[str]:
+        """Add torrent via magnet link"""
+        try:
+            data = {"magnet": magnet_link}
+            if save_path:
+                data["save_path"] = save_path
+            resp = req_lib.post(f"{self.base_url}/api/torrents/add", json=data, timeout=30)
+            if resp.status_code == 200:
+                result = resp.json()
+                if result.get('success'):
+                    return result.get('info_hash')
+        except Exception as e:
+            logger.error(f"GoStream add_torrent error: {e}")
+        return None
+    
+    def remove_torrent(self, info_hash: str, delete_files: bool = False) -> bool:
+        """Remove torrent"""
+        try:
+            data = {"delete_files": delete_files}
+            resp = req_lib.post(f"{self.base_url}/api/torrents/{info_hash}/remove", json=data, timeout=10)
+            if resp.status_code == 200:
+                return resp.json().get('success', False)
+        except Exception as e:
+            logger.error(f"GoStream remove_torrent error: {e}")
+        return False
+    
+    def get_cache_stats(self) -> Dict:
+        """Get cache statistics"""
+        try:
+            resp = req_lib.get(f"{self.base_url}/api/cache/stats", timeout=5)
+            if resp.status_code == 200:
+                return resp.json().get('stats', {})
+        except Exception as e:
+            logger.error(f"GoStream cache stats error: {e}")
+        return {}
+    
+    def set_priority_mode(self, info_hash: str, enabled: bool = True) -> bool:
+        """Enable/disable priority mode for torrent"""
+        try:
+            data = {"enabled": enabled}
+            resp = req_lib.post(f"{self.base_url}/api/torrents/{info_hash}/priority", json=data, timeout=5)
+            if resp.status_code == 200:
+                return resp.json().get('success', False)
+        except Exception as e:
+            logger.error(f"GoStream priority mode error: {e}")
+        return False
+    
+    def get_streaming_files(self, info_hash: str) -> List[Dict]:
+        """Get list of streamable files for a torrent"""
+        torrent = self.get_torrent(info_hash)
+        if not torrent:
+            return []
+        
+        files = torrent.get('files', [])
+        streamable = []
+        
+        for i, f in enumerate(files):
+            path = f.get('path', '')
+            size = f.get('size', 0)
+            # Check if video file
+            if any(path.lower().endswith(ext) for ext in ['.mkv', '.mp4', '.avi', '.mov', '.webm', '.m4v']):
+                safe_name = self._sanitize_filename(torrent.get('name', info_hash[:8]))
+                file_name = self._sanitize_filename(path.split('/')[-1])
+                
+                # If not already has extension, add .mkv
+                if not any(file_name.endswith(ext) for ext in ['.mkv', '.mp4', '.avi', '.mov']):
+                    file_name += '.mkv'
+                
+                streamable.append({
+                    'index': i,
+                    'path': path,
+                    'name': file_name,
+                    'size': size,
+                    'size_formatted': self._format_size(size),
+                    'stream_url': f"/api/gostream/stream/{info_hash}/{i}",
+                    'direct_path': f"{self.mount_path}/{safe_name}/{file_name}",
+                })
+        
+        return streamable
+    
+    def _sanitize_filename(self, name: str) -> str:
+        """Sanitize filename for filesystem"""
+        invalid = '<>:"/\\|?*'
+        for char in invalid:
+            name = name.replace(char, '_')
+        return name[:255]
+    
+    def _format_size(self, size_bytes: int) -> str:
+        """Format bytes to human readable"""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+# Initialize GoStream client
+gostream_client = GoStreamClient(
+    host=GOSTREAM_API_HOST,
+    port=GOSTREAM_API_PORT,
+    mount_path=GOSTREAM_MOUNT_PATH
+)
+
 # ---------------------------------------------------------------------------
 # Lightweight qBittorrent helpers (no external src dependency)
 # ---------------------------------------------------------------------------
@@ -559,6 +715,7 @@ class AppState:
         self.docker: Optional[DockerManager] = None
         self.telegram_storage: Optional[TelegramStorageService] = None
         self.user_manager: Optional[UserManager] = None
+        self.gostream: Optional[GoStreamClient] = None
 
 app_state = AppState()
 
@@ -618,6 +775,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize User Manager: {e}")
 
+    # Initialize GoStream client reference
+    try:
+        app_state.gostream = gostream_client
+        if gostream_client.is_available():
+            logger.info(f"GoStream connected at {GOSTREAM_API_HOST}:{GOSTREAM_API_PORT}")
+        elif GOSTREAM_ENABLED:
+            logger.warning(f"GoStream enabled but not available at {GOSTREAM_API_HOST}:{GOSTREAM_API_PORT}")
+        else:
+            logger.info("GoStream disabled (GOSTREAM_ENABLED=false)")
+    except Exception as e:
+        logger.error(f"GoStream init error: {e}")
+
     # Start background tasks
     broadcast_task = asyncio.create_task(broadcast_updates())
     
@@ -676,6 +845,254 @@ app.add_middleware(ErrorHandlerMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(RequestIDMiddleware)
+
+# ---------------------------------------------------------------------------
+# GoStream Routes
+# ---------------------------------------------------------------------------
+
+@app.get("/api/gostream/status")
+async def gostream_status(current_user: Dict = Depends(get_current_user_optional)):
+    """Get GoStream status and availability"""
+    is_available = gostream_client.is_available()
+    return {
+        "enabled": GOSTREAM_ENABLED,
+        "available": is_available,
+        "api_host": GOSTREAM_API_HOST,
+        "api_port": GOSTREAM_API_PORT,
+        "mount_path": GOSTREAM_MOUNT_PATH,
+    }
+
+@app.get("/api/gostream/torrents")
+async def gostream_list_torrents(current_user: Dict = Depends(get_current_user_optional)):
+    """List all GoStream torrents"""
+    try:
+        if not gostream_client.is_available():
+            raise HTTPException(status_code=503, detail="GoStream not available")
+        
+        torrents = gostream_client.list_torrents()
+        return {"success": True, "torrents": torrents}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing GoStream torrents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/gostream/torrents/{info_hash}")
+async def gostream_get_torrent(info_hash: str, current_user: Dict = Depends(get_current_user_optional)):
+    """Get GoStream torrent details with streamable files"""
+    try:
+        if not gostream_client.is_available():
+            raise HTTPException(status_code=503, detail="GoStream not available")
+        
+        torrent = gostream_client.get_torrent(info_hash)
+        if not torrent:
+            raise HTTPException(status_code=404, detail="Torrent not found")
+        
+        # Get streamable files
+        streamable_files = gostream_client.get_streaming_files(info_hash)
+        
+        return {
+            "success": True,
+            "torrent": torrent,
+            "streamable_files": streamable_files,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting GoStream torrent: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/gostream/torrents/add")
+async def gostream_add_torrent(magnet_link: str, current_user: Dict = Depends(get_current_user)):
+    """Add torrent to GoStream via magnet link"""
+    try:
+        if not gostream_client.is_available():
+            raise HTTPException(status_code=503, detail="GoStream not available")
+        
+        info_hash = gostream_client.add_torrent(magnet_link)
+        if not info_hash:
+            raise HTTPException(status_code=500, detail="Failed to add torrent")
+        
+        return {
+            "success": True,
+            "info_hash": info_hash,
+            "message": "Torrent added successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding GoStream torrent: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/gostream/torrents/{info_hash}")
+async def gostream_remove_torrent(info_hash: str, delete_files: bool = False, current_user: Dict = Depends(get_current_user)):
+    """Remove torrent from GoStream"""
+    try:
+        if not gostream_client.is_available():
+            raise HTTPException(status_code=503, detail="GoStream not available")
+        
+        success = gostream_client.remove_torrent(info_hash, delete_files)
+        if not success:
+            raise HTTPException(status_code=404, detail="Torrent not found")
+        
+        return {"success": True, "message": "Torrent removed"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing GoStream torrent: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/gostream/torrents/{info_hash}/priority")
+async def gostream_set_priority(info_hash: str, enabled: bool = True, current_user: Dict = Depends(get_current_user)):
+    """Set priority mode for GoStream torrent"""
+    try:
+        if not gostream_client.is_available():
+            raise HTTPException(status_code=503, detail="GoStream not available")
+        
+        success = gostream_client.set_priority_mode(info_hash, enabled)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to set priority mode")
+        
+        return {
+            "success": True,
+            "info_hash": info_hash,
+            "priority_mode": enabled
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting GoStream priority: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/gostream/cache/stats")
+async def gostream_cache_stats(current_user: Dict = Depends(get_current_user_optional)):
+    """Get GoStream cache statistics"""
+    try:
+        if not gostream_client.is_available():
+            raise HTTPException(status_code=503, detail="GoStream not available")
+        
+        stats = gostream_client.get_cache_stats()
+        return {"success": True, "stats": stats}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting GoStream cache stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/gostream/stream/{info_hash}/{file_index}")
+async def gostream_stream_proxy(
+    info_hash: str, 
+    file_index: int, 
+    request: Request,
+    current_user: Dict = Depends(get_current_user_optional)
+):
+    """
+    Proxy stream from GoStream FUSE filesystem.
+    This endpoint serves video files directly from the FUSE mount.
+    """
+    try:
+        if not gostream_client.is_available():
+            raise HTTPException(status_code=503, detail="GoStream not available")
+        
+        # Get torrent and verify file exists
+        torrent = gostream_client.get_torrent(info_hash)
+        if not torrent:
+            raise HTTPException(status_code=404, detail="Torrent not found")
+        
+        files = torrent.get('files', [])
+        if file_index >= len(files):
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        file_info = files[file_index]
+        
+        # Get streaming files info
+        streamable = gostream_client.get_streaming_files(info_hash)
+        stream_info = next((s for s in streamable if s['index'] == file_index), None)
+        
+        if not stream_info:
+            raise HTTPException(status_code=404, detail="Streamable file not found")
+        
+        # Activate priority mode when streaming starts
+        gostream_client.set_priority_mode(info_hash, True)
+        
+        # Build the actual file path from FUSE mount
+        file_path = stream_info['direct_path']
+        
+        # Check if file exists and get its size
+        import os
+        if not os.path.exists(file_path):
+            # File might not be fully mounted yet, return streaming URL from GoStream API
+            # Redirect to the actual streaming via GoStream
+            return {
+                "success": True,
+                "stream_type": "gostream_direct",
+                "info_hash": info_hash,
+                "file_index": file_index,
+                "file_name": stream_info['name'],
+                "file_size": stream_info['size'],
+                "priority_mode": True,
+                "message": "Use the Jellyfin integration or mount point for streaming"
+            }
+        
+        # File exists, serve it directly
+        file_size = os.path.getsize(file_path)
+        
+        # Handle range requests for video streaming
+        range_header = request.headers.get('range')
+        
+        if range_header:
+            # Parse range header
+            range_value = range_header.replace('bytes=', '').split('-')
+            start = int(range_value[0]) if range_value[0] else 0
+            end = int(range_value[1]) if range_value[1] else file_size - 1
+            
+            # Read file chunk
+            with open(file_path, 'rb') as f:
+                f.seek(start)
+                data = f.read(end - start + 1)
+            
+            headers = {
+                'Content-Range': f'bytes {start}-{end}/{file_size}',
+                'Accept-Ranges': 'bytes',
+                'Content-Length': str(len(data)),
+                'Content-Type': 'video/mp4',
+            }
+            
+            return StreamingResponse(
+                iter([data]),
+                status_code=206,
+                headers=headers,
+                media_type="video/mp4"
+            )
+        else:
+            # Full file request (for small files or direct download)
+            def file_generator():
+                with open(file_path, 'rb') as f:
+                    while True:
+                        chunk = f.read(1024 * 1024)  # 1MB chunks
+                        if not chunk:
+                            break
+                        yield chunk
+            
+            headers = {
+                'Accept-Ranges': 'bytes',
+                'Content-Length': str(file_size),
+                'Content-Type': 'video/mp4',
+                'Content-Disposition': f'inline; filename="{stream_info["name"]}"',
+            }
+            
+            return StreamingResponse(
+                file_generator(),
+                headers=headers,
+                media_type="video/mp4"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error streaming GoStream file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ---------------------------------------------------------------------------
 # Helpers

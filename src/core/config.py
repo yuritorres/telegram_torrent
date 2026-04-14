@@ -115,3 +115,41 @@ REMOVE_AFTER_SEND = os.getenv('REMOVE_AFTER_SEND', 'True').lower() in ('true', '
 # Sync
 SYNC_INTERVAL = int(os.getenv('SYNC_INTERVAL', 30))
 AUTO_SCAN_JELLYFIN = os.getenv('AUTO_SCAN_JELLYFIN', 'True').lower() in ('true', '1', 't')
+
+# ============================================
+# GoStream - BitTorrent Streaming Engine
+# ============================================
+
+# Habilitar/desabilitar GoStream
+GOSTREAM_ENABLED = os.getenv('GOSTREAM_ENABLED', 'False').lower() in ('true', '1', 't')
+
+# Paths
+GOSTREAM_MOUNT_PATH = os.getenv('GOSTREAM_MOUNT_PATH', '/mnt/gostream')
+GOSTREAM_CACHE_DIR = os.getenv('GOSTREAM_CACHE_DIR', './gostream_cache')
+GOSTREAM_STATE_DIR = os.getenv('GOSTREAM_STATE_DIR', './gostream_state')
+
+# BitTorrent Settings
+GOSTREAM_PORT_START = int(os.getenv('GOSTREAM_PORT_START', 6881))
+GOSTREAM_PORT_END = int(os.getenv('GOSTREAM_PORT_END', 6889))
+GOSTREAM_MAX_CONNECTIONS = int(os.getenv('GOSTREAM_MAX_CONNECTIONS', 100))
+GOSTREAM_DOWNLOAD_LIMIT = int(os.getenv('GOSTREAM_DOWNLOAD_LIMIT', 0))  # 0 = unlimited
+GOSTREAM_UPLOAD_LIMIT = int(os.getenv('GOSTREAM_UPLOAD_LIMIT', 0))  # 0 = unlimited
+
+# Cache Settings
+GOSTREAM_READ_AHEAD_MB = int(os.getenv('GOSTREAM_READ_AHEAD_MB', 512))
+GOSTREAM_CACHE_SHARDS = int(os.getenv('GOSTREAM_CACHE_SHARDS', 32))
+GOSTREAM_DISK_WARMUP_MB = int(os.getenv('GOSTREAM_DISK_WARMUP_MB', 2048))
+
+# API Settings
+GOSTREAM_API_ENABLED = os.getenv('GOSTREAM_API_ENABLED', 'true').lower() == 'true'
+GOSTREAM_API_HOST = os.getenv('GOSTREAM_API_HOST', '0.0.0.0')
+GOSTREAM_API_PORT = int(os.getenv('GOSTREAM_API_PORT', 8090))
+
+# Jellyfin Integration
+GOSTREAM_JELLYFIN_WEBHOOK = os.getenv('GOSTREAM_JELLYFIN_WEBHOOK', 'true').lower() == 'true'
+GOSTREAM_WEBHOOK_PORT = int(os.getenv('GOSTREAM_WEBHOOK_PORT', 5001))
+
+# Feature Flags
+GOSTREAM_ENABLE_DHT = os.getenv('GOSTREAM_ENABLE_DHT', 'true').lower() == 'true'
+GOSTREAM_ENABLE_LSD = os.getenv('GOSTREAM_ENABLE_LSD', 'true').lower() == 'true'
+GOSTREAM_RESPONSIVE_MODE = os.getenv('GOSTREAM_RESPONSIVE_MODE', 'true').lower() == 'true'

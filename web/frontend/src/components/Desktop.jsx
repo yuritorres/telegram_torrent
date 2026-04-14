@@ -9,7 +9,8 @@ import AppStoreApp from './apps/AppStoreApp'
 import FileManagerApp from './apps/FileManagerApp'
 import FileEditor from './FileEditor'
 import SettingsApp from './apps/SettingsApp'
-import { Download, Film, Container, Activity, Store, FolderOpen, FileText, Settings } from 'lucide-react'
+import GoStreamApp from './apps/GoStreamApp'
+import { Download, Film, Container, Activity, Store, FolderOpen, FileText, Settings, Play } from 'lucide-react'
 import { useSystem } from '../context/SystemContext'
 
 const Desktop = () => {
@@ -64,11 +65,18 @@ const Desktop = () => {
       color: 'bg-purple-500'
     },
     {
+      id: 'gostream',
+      name: 'GoStream',
+      icon: Play,
+      component: GoStreamApp,
+      color: 'bg-cyan-500'
+    },
+    {
       id: 'docker',
       name: 'Containers Docker',
       icon: Container,
       component: DockerApp,
-      color: 'bg-cyan-500'
+      color: 'bg-cyan-600'
     },
     {
       id: 'monitor',
