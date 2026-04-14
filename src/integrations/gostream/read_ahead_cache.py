@@ -23,8 +23,8 @@ class CacheEntry:
     data: bytes
     size: int
     timestamp: float
+    last_access: float = 0.0
     access_count: int = 0
-    last_access: float
 
 
 class CacheShard:

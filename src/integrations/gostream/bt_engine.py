@@ -119,9 +119,10 @@ class BTEngine:
         """Inicia a sessão BitTorrent"""
         try:
             # Cria sessão com settings pack
+            # Configurações válidas do libtorrent
             settings = {
                 'listen_interfaces': f'0.0.0.0:{self.config.listen_port_start}-{self.config.listen_port_end}',
-                'max_connections_per_torrent': self.config.max_connections_per_torrent,
+                'connections_limit': self.config.max_connections_per_torrent,
                 'connection_speed': 50,
                 'rate_limit_ip_overhead': True,
             }
