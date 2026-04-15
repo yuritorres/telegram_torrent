@@ -112,7 +112,7 @@ const GoStreamApp = () => {
 
     setIsLoading(true)
     try {
-      const resp = await axios.post(`${API_BASE}/gostream/torrents/add?magnet_link=${encodeURIComponent(magnetLink)}`)
+      const resp = await axios.post(`${API_BASE}/gostream/torrents/add`, { magnet_link: magnetLink })
       const data = resp.data
       
       if (data.success) {

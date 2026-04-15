@@ -900,14 +900,17 @@ async def gostream_get_torrent(info_hash: str, current_user: Dict = Depends(get_
         logger.error(f"Error getting GoStream torrent: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+class MagnetLinkRequest(BaseModel):
+    magnet_link: str
+
 @app.post("/api/gostream/torrents/add")
-async def gostream_add_torrent(magnet_link: str, current_user: Dict = Depends(get_current_user)):
+async def gostream_add_torrent(request: MagnetLinkRequest, current_user: Dict = Depends(get_current_user)):
     """Add torrent to GoStream via magnet link"""
     try:
         if not gostream_client.is_available():
             raise HTTPException(status_code=503, detail="GoStream not available")
         
-        info_hash = gostream_client.add_torrent(magnet_link)
+        info_hash = gostream_client.add_torrent(request.magnet_link)
         if not info_hash:
             raise HTTPException(status_code=500, detail="Failed to add torrent")
         
